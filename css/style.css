@@ -1,0 +1,66 @@
+[x-cloak] { display: none !important; }
+nav.navbar div.container a.navbar-brand {
+    background-image: url(../img/Kingsoft_Logo.png);
+    background-position: center;
+    background-size: cover;
+    height: 80px;
+    width: 108px;
+    top: 0px;
+}
+nav.navbar div.container div.navbar-collapse ul li a.nav-link {
+    padding: 32px 0;
+    color: #181920;
+    font-size: 14px;
+}
+button.icon-button,
+button.text-icon-button {
+    appearance: none;
+    background: none;
+    outline: none;
+    border:  none;
+    padding: .2rem;
+}
+
+div.probootstrap-pricing-wrap div.probootstrap-pricing.popular {
+    margin-top: -230px;
+}
+div.probootstrap-pricing-wrap div.probootstrap-pricing span.kes {
+    font-size: 14px;
+    margin-top: .4rem;
+    display: inline-block;
+    letter-spacing: 4px;
+}
+div.probootstrap-pricing-wrap div.cto {
+    margin-bottom: 32px;
+}
+div.probootstrap-pricing-wrap div.cto a.btn {
+    transition: all .2s ease-in;
+}
+div.probootstrap-pricing-wrap div.cto > a.btn.download {
+    background-color: #313638; 
+    border: none;
+    border: 1px solid #313638;
+}
+div.probootstrap-pricing-wrap div.cto > a.btn:hover {
+    background: transparent;
+    font-weight: 500;
+}
+div.probootstrap-pricing-wrap div.cto > a.btn.download:hover {
+    color: #313638;
+}
+
+div.probootstrap-pricing-wrap div.cto > a.btn.trial:hover {
+    color: #7ed321;
+    
+}
+
+@media (min-width: 768px) {
+    nav.navbar div.container a.navbar-brand {
+        background-image: url(../img/Kingsoft_Logo.png);
+        background-position: center;
+        background-size: cover;
+        height: 80px;
+        width: 136px;
+        /* top: 10px; */
+    }
+}

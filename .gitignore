@@ -1,0 +1,5 @@
+.env
+node_modules
+payments/node_modules
+payments/dist
+vendor

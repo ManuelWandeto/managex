@@ -1,0 +1,94 @@
+button.text-icon-button {
+    display: flex;
+    gap: .6rem;
+    align-items: center;
+    justify-content: start;
+    padding: .6rem 1rem;
+    font-family: inherit;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-weight: 500;
+}
+form label > i {
+    font-size: 1rem;
+    margin-right: .2rem;
+}
+body {
+    padding-top: 112px;
+}
+div.checkout-nav {
+    background: #fff;
+    border-top: 1px solid #ddd;
+    border-bottom: 1px solid #ddd;
+    margin-bottom: 3rem;
+}
+div.checkout-progress {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 90%;
+}
+div.checkout-progress div.step {
+    display: flex;
+    flex-direction: column;
+    gap: .6rem;
+    align-items: center;
+    flex: 1;
+}
+div.checkout-progress div.step > hr {
+    flex: 1;
+    display: none;
+}
+div.checkout-progress div.step > p {
+    margin: 0;
+    font-size: .875rem;
+    text-align: center;
+}
+div.checkout-progress div.step > h4 {
+    height: 40px;
+    width: 40px;
+    background: #d3d3d3;
+    color: rgb(19, 19, 19);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 1rem;
+    margin: 0;
+}
+div.checkout-progress div.step.complete > h4 {
+    background: #7ed321;
+    color: white;
+}
+div.checkout-progress div.step.complete  > p {
+    font-weight: 600
+}
+div.summary .summary-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+@media (min-width: 568px) {
+    div.checkout-progress {
+        justify-content: stretch;
+    }
+    div.checkout-progress div.step {
+        flex-direction: row;
+        align-items: center;
+    }
+    div.checkout-progress div.step > hr {
+        display: block;
+    }
+}
+@media (min-width: 768px) {
+    div.checkout-progress {
+        width: 75%;
+    }
+}
+@media (min-width: 1200px) {
+    div.checkout-progress {
+        width: 50%;
+    }
+}
