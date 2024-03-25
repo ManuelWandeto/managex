@@ -5,8 +5,13 @@ function checkoutFormData() {
 
     return {
         fields: {
-            fullName: {
+            businessName: {
                 value: null, error: null, rules: [
+                    'required'
+                ]
+            },
+            businessType: {
+                value: undefined, error: null, rules: [
                     'required'
                 ]
             },
@@ -65,12 +70,32 @@ function checkoutFormData() {
         async submit(e) {
             try {
                 const formData = new FormData(e.target)
-                formData.set("merchant_id", randomIdGenerator(16));
                 formData.set("start_date", startDate.format('YYYY-MM-DD HH:mm:ss'));
-                formData.set("end_date", endDate.format('YYYY-MM-DD HH:mm:ss'));
+                if(endDate) {
+                    formData.set("end_date", endDate.format('YYYY-MM-DD HH:mm:ss'));
+                }
+                formData.set("total", Alpine.store('price').total);
+                if(Alpine.store('price').discounts.length) {
+                    formData.set("discounts", Alpine.store('price').discounts.map(d => d.id));
+                }
+                formData.set('referrer', window.location.href)
                 const res = await axios.post("api/order.php", formData)
                 if(!res.data.status || res.data.status != 200) {
                     throw new Error('Uncaught error handling order request')
+                }
+                return res.data
+            } catch (error) {
+                console.error(error?.response?.data ?? error)
+                throw error;
+            }
+        },
+        async submitTrial(e, plan) {
+            try {
+                const formData = new FormData(e.target)
+                formData.set('plan', plan)
+                const res = await axios.post("api/register_trial.php", formData)
+                if(!res.data) {
+                    throw new Error('Uncaught error handling free trial request')
                 }
                 return res.data
             } catch (error) {
@@ -98,9 +123,13 @@ function randomIdGenerator(n) {
     return result;
 }
 
-function formatCurrency(value, currency, locale) {
-    return new Intl.NumberFormat(locale, {
-        style: 'currency',
-        currency,
-    }).format(value);
+
+async function processDiscount(code) {
+    try {
+        const res = await axios.get(`api/process_discount.php?code=${code}`)
+        return res.data
+    } catch (error) {
+        throw new Error(error?.response?.data ?? error);
+    }
 }
+
