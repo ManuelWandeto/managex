@@ -89,7 +89,7 @@ export const mergeStyles = () => {
       'css/vendor/owl.carousel.min.css',
       'css/vendor/owl.theme.default.min.css',
       // 'fonts/icomoon/style.css',
-      'css/template-style.css',
+      // 'css/template-style.css',
     ])
     // .pipe(sourcemaps.init())
     // .pipe(autoprefixer({
