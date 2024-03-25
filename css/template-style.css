@@ -64,6 +64,9 @@ a:hover, a:focus, a:active {
   color: #71bd1e;
   text-decoration: none;
 }
+section#hero h5 {
+  font-size: 1rem;
+}
 
 .probootstrap-navbar {
   background: #ffffff;
@@ -1374,6 +1377,31 @@ a:hover, a:focus, a:active {
 
 .probootstrap-pricing-wrap {
   position: relative;
+  height: 100%;
+}
+.probootstrap-pricing-wrap .probootstrap-pricing div.cta {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: stretch;
+  margin-bottom: 30px;
+}
+.probootstrap-pricing-wrap .probootstrap-pricing a.btn {
+  padding: .6rem 2rem;
+  color: white;
+  transition: all .2s cubic-bezier(0.42, 0, 0.58, 1);
+  transform: scale(1);
+}
+.probootstrap-pricing-wrap .probootstrap-pricing a.btn i {
+  margin-right: .2rem;
+}
+
+
+.probootstrap-pricing-wrap .probootstrap-pricing a.btn:hover {
+  transform: scale(1.05);
+  color: black;
+  background-color: transparent !important;
+  border: 1px solid black;
 }
 
 .probootstrap-pricing {
@@ -1412,7 +1440,7 @@ a:hover, a:focus, a:active {
   font-size: 16px;
   text-transform: uppercase;
   letter-spacing: .1em;
-  margin-bottom: 50px;
+  margin-bottom: 24px;
 }
 
 .probootstrap-pricing h3 > span {
@@ -1425,11 +1453,11 @@ a:hover, a:focus, a:active {
 }
 
 .probootstrap-pricing .probootstrap-price-wrap {
-  margin-bottom: 50px;
+  margin-bottom: 32px;
 }
 
 .probootstrap-pricing .probootstrap-price-wrap .probootstrap-price {
-  font-size: 50px;
+  font-size: 34px;
   color: #7ed321;
   font-weight: 100;
   display: block;
@@ -1437,11 +1465,11 @@ a:hover, a:focus, a:active {
 }
 
 .probootstrap-pricing .probootstrap-price-wrap .probootstrap-price-per-month {
-  font-size: 13px;
+  font-size: 16px;
 }
 
 .probootstrap-pricing ul {
-  padding: 0 30px;
+  /* padding: 0 30px; */
   margin: 0 0 50px 0;
 }
 
@@ -1452,10 +1480,16 @@ a:hover, a:focus, a:active {
 }
 
 .probootstrap-pricing ul li {
-  padding: 0;
-  margin: 0 0 20px 0;
+  padding-left: 0;
+  margin: 0 0 14px 0;
   line-height: 24px;
   list-style: none;
+  font-size: 1rem;
+  text-align: start;
+}
+
+.probootstrap-pricing ul li > i {
+  margin-right: .5rem;
 }
 
 .probootstrap-testimony-wrap {
