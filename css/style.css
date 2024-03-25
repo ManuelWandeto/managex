@@ -12,6 +12,37 @@ nav.navbar div.container div.navbar-collapse ul li a.nav-link {
     color: #181920;
     font-size: 14px;
 }
+section#hero.probootstrap-hero {
+    margin-top: 4rem;
+    background-color: #121420;
+}
+
+section#hero.probootstrap-hero div.mgx-logo {
+    background-image: url(../img/mgx_logo.png);
+    width: 100%;
+    height: 200px;
+    background-position: center;
+    background-size: contain;
+    background-repeat: no-repeat;
+}
+
+section.probootstrap-pricing-table div.probootstrap-pricing-wrap div.probootstrap-pricing {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+/* section {
+    width: 100% !important;
+} */
+section.probootstrap-pricing-table div.probootstrap-pricing-wrap div.probootstrap-pricing table {
+    min-width: 900px;
+    width: 100%;
+    table-layout: fixed;
+    word-wrap: break-word;
+    margin-top:auto;
+    margin-bottom:auto;
+}
 button.icon-button,
 button.text-icon-button {
     appearance: none;
@@ -21,8 +52,59 @@ button.text-icon-button {
     padding: .2rem;
 }
 
+.probootstrap-pricing-wrap .probootstrap-pricing.bronze {
+    border-bottom: 4px solid #CD8032;
+  }
+  .probootstrap-pricing-wrap .probootstrap-pricing.bronze a.btn.btn-bronze {
+    background-color: #CD8032;
+  }
+  
+  
+  .probootstrap-pricing-wrap .probootstrap-pricing.bronze h3,
+  .probootstrap-pricing-wrap .probootstrap-pricing.bronze span.probootstrap-price {
+    color: #CD8032;
+  }
+  
+  .probootstrap-pricing-wrap .probootstrap-pricing.silver {
+    border-bottom: 4px solid #C4C1B7;
+  }
+  .probootstrap-pricing-wrap .probootstrap-pricing.silver h3,
+  .probootstrap-pricing-wrap .probootstrap-pricing.silver span.probootstrap-price {
+    color: #9A9584;
+  }
+  .probootstrap-pricing-wrap .probootstrap-pricing.silver a.btn.btn-silver {
+    background-color: #9A9584;
+  }
+  .probootstrap-pricing-wrap .probootstrap-pricing.gold {
+    border-bottom: 4px solid #ECA400;
+    transition: all .2s ease-in;
+    transform: scale(1);
+  
+  }
+  
+  .probootstrap-pricing-wrap .probootstrap-pricing.gold h3,
+  .probootstrap-pricing-wrap .probootstrap-pricing.gold span.probootstrap-price {
+    color: #ECA400;
+  }
+  .probootstrap-pricing-wrap .probootstrap-pricing.gold a.btn.btn-gold {
+    background-color: #ECA400;
+  }
+
 div.probootstrap-pricing-wrap div.probootstrap-pricing.popular {
     margin-top: -230px;
+    position: relative;
+    overflow: hidden;
+}
+div.probootstrap-pricing-wrap div.probootstrap-pricing.popular::after {
+    content: "Popular";
+    position: absolute;
+    top: 0;
+    right: 0;
+    padding: .6rem 6rem;
+    background-color: #9A9584; /* Tomato color */
+    color: white;
+    font-weight: bold;
+    transform: rotate(45deg) translate(28%, -50px);
 }
 div.probootstrap-pricing-wrap div.probootstrap-pricing span.kes {
     font-size: 14px;
@@ -54,7 +136,244 @@ div.probootstrap-pricing-wrap div.cto > a.btn.trial:hover {
     
 }
 
+.row.probootstrap-gutter60.features,
+.row.illustrations {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    align-items: start;
+    scroll-snap-type: x mandatory;
+}
+.row.illustrations {
+    gap: 2rem;
+}
+.row.probootstrap-gutter60.features::-webkit-scrollbar,
+.row.illustrations::-webkit-scrollbar {
+    display: none;
+}
+.row.probootstrap-gutter60.features > div,
+.row.illustrations > div {
+    scroll-snap-align: start;
+}
+button.btn-control{
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    border: none;
+    background: #4096ee;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    color: white;
+    font-size: 1.4rem;
+    transition: all .3s ease-in-out;
+    opacity: .5;
+}
+button.btn-control:hover {
+    background: #39ced6;
+    transform: scale(1.05) translateY(-50%);
+    opacity: 1;
+}
+button.btn-control.prev {
+    left: 1rem;
+}
+button.btn-control.next {
+    right: 1rem;
+}
+
+div.row.illustrations a.video-link {
+    display: block;
+}
+div.row.illustrations div.youtube-video-link {
+    aspect-ratio: 16/9;
+    min-width: 300px;
+    background-size: contain;
+    background-repeat: no-repeat;
+    border-radius: 8px;
+    box-shadow: 7px 10px 19px -12px rgba(0,0,0,0.75);
+    -webkit-box-shadow: 7px 10px 19px -12px rgba(0,0,0,0.75);
+    -moz-box-shadow: 7px 10px 19px -12px rgba(0,0,0,0.75);
+}
+div.row.illustrations div.youtube-video-link > span {
+    position: absolute;
+    top: 0;
+    right: 0;
+    font-size: 3rem;
+    bottom: 0;
+    left: 0;
+    background-color: rgba(27, 27, 27, .65);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: red;
+    opacity: 0;
+    z-index: 999;
+    border-radius: 8px;
+    transition: opacity .2s ease-in;
+}
+div.row.illustrations a.video-link:hover > div.youtube-video-link > span {
+    opacity: 1;
+}
+.text-sm {
+    font-size: 12px;
+}
+.price {
+    font-size: 3em;
+}
+
+/* switch toggle */
+
+/* The switch - the box around the slider */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 120px;
+    height: 40px;
+}
+
+/* Hide default HTML checkbox */
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+/* The slider */
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    font-weight: 500;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 32px;
+    width: 32px;
+    left: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: white;
+    transition: .4s;
+}
+.slider::after {
+    position: absolute;
+    content: "FOREVER";
+    
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    transition: .4s;
+}
+
+input:checked + .slider {
+    background-color: #2196F3;
+}
+
+input:focus + .slider {
+    box-shadow: 0 0 1px #2196F3;
+}
+
+input:checked + .slider:before {
+    transform: translateY(-50%) translateX(80px);
+}
+input:checked + .slider:after {
+    content: "MONTHLY";
+    transform: translateY(-50%) translateX(-26px);
+    transition: .4s;
+    color: white;
+}
+
+/* Rounded sliders */
+.slider.round {
+    border-radius: 34px;
+}
+
+.slider.round:before {
+    border-radius: 50%;
+}
+/* switch toggle */
+
+/* waves separator */
+.waves-separator-top,
+.waves-separator-bottom {
+    aspect-ratio: 960/300;
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center;
+    width: 100%;
+}
+.waves-separator-top {
+    background-image: url('../img/waves_separator_top.svg');
+}
+.waves-separator-bottom {
+    background-image: url('../img/waves_separator_bottom.svg');
+}
+
+
+/* AD Banner */
+div.ad-banner {
+    background-color: #79c12b;
+    color: white;
+    padding: 1.4rem;
+    border-radius: 4px;
+}
+div.ad-banner h5 {
+    color: white
+}
+
+/* Loader */
+.loader {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: block;
+    margin:15px auto;
+    position: relative;
+    color: #7ed321;
+    box-sizing: border-box;
+    animation: animloader 1s linear infinite alternate;
+  }
+  
+  @keyframes animloader {
+    0% {
+      box-shadow: -38px -12px ,  -14px 0,  14px 0, 38px 0;
+    }
+    33% {
+      box-shadow: -38px 0px, -14px -12px,  14px 0, 38px 0;
+    }
+    66% {
+      box-shadow: -38px 0px , -14px 0, 14px -12px, 38px 0;
+    }
+    100% {
+      box-shadow: -38px 0 , -14px 0, 14px 0 , 38px -12px;
+    }
+  }
+
+
 @media (min-width: 768px) {
+    button.btn-control.prev {
+        left: 5rem;
+    }
+    button.btn-control.next {
+        right: 5rem;
+    }
+    div.row.illustrations div.youtube-video-link {
+        min-width: 480px;
+    }
+    /* div.row.illustrations div.youtube-video-link {
+        height: 315px;
+        width: 560px;
+    } */
+
+    section#hero.probootstrap-hero {
+        margin-top: 0;
+    }
     nav.navbar div.container a.navbar-brand {
         background-image: url(../img/Kingsoft_Logo.png);
         background-position: center;
