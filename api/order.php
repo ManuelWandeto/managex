@@ -5,44 +5,35 @@ require_once(__DIR__ . '/../db/db.inc.php');
 require_once(__DIR__ . '/../db/queries.inc.php');
 require_once(__DIR__ . '/../utils/respond.php');
 require_once(__DIR__ . '/../utils/logger.php');
+require_once(__DIR__ . '/../utils/random.php');
+require_once(__DIR__ . '/../utils/load_env.php');
+require_once(__DIR__ . '/../utils/parse_url.php');
 require_once(__DIR__ . '/../utils/pesapal_auth.php');
+require_once(__DIR__ . '/../utils/pesapal_order.php');
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 $apiLogger->info('Create order request');
 
-$curl = curl_init();
 try {
     $pdo_conn->beginTransaction();
     $customer = register_customer($pdo_conn, $_POST, $dbLogger);
     $_SESSION['customer'] = $customer;
-    // pesapal auth
-    $authkey = getAuthKey($logger);
-    // submit order request
-    curl_setopt($curl, CURLOPT_URL, "https://cybqa.pesapal.com/pesapalv3/api/Transactions/SubmitOrderRequest");
-    curl_setopt($curl, CURLOPT_POST, true);
-    curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($curl, CURLOPT_HTTPHEADER, [
-        'Content-Type: application/json',
-        'Accept: application/json', 
-        "Authorization: Bearer $authkey"
-    ]);
 
-    $name_parts = explode(" ", $_POST['fullname']);
+    $origin = $origin = $_ENV['APP_ENV'] == 'development' ? 'http://localhost:3000/managex' : 'https://kingsoft.biz';;
+
     $body = [
-        "id" => $_POST['merchant_id'],
-        "currency" => $_SESSION['localle']['country']['currency'],
-        "amount" => $_SESSION['locallePrice'],
+        "id" => getRandomString(40),
+        "currency" => $_SESSION['currency'] == 'KES' ? 'KES' : 'USD',
+        "amount" => $_POST['total'],
         "description" => "Payment for Managex software plan: " . $_SESSION['plan']['name'],
-        "callback_url" => "http://localhost:3000/managex/controllers/process_payment.php",
-        "cancellation_url" => "http://localhost:3000/new-kingsoft?cancel=true",
+        "callback_url" => "$origin/controllers/process_payment.php",
+        "cancellation_url" => "$origin/controllers/cancel_payment.php",
         "notification_id" => "7a029074-90e0-460e-aa87-dd9b2ae0ffd2",
         "billing_address" => array_filter([
             "email_address" => $_POST['email'],
             "phone_number" => $_POST['phone'] ?? NULL,
-            "first_name" => $name_parts[0],
-            "last_name" => end($name_parts),
             "line_1" => $_POST['address'] ?? NULL,
             "country_code" => $_SESSION['localle']['country']['iso_code'],
             "city" => $_POST['city'] ?? NULL,
@@ -52,7 +43,8 @@ try {
             return !is_null($value);
         })
     ];
-    if($_SESSION['plan']['payment_frequency'] !== 'ONETIME') {
+    $endDate = NULL;
+    if($_SESSION['model'] !== 'ONETIME') {
         $_SESSION['plan']['expiry'] = $_POST['end_date'];
         $startDate = new DateTime($_POST['start_date']);
         $endDate = new DateTime($_POST['end_date']);
@@ -62,30 +54,67 @@ try {
             'subscription_details' => [
                 'start_date' => $startDate->format('d-m-Y'),
                 'end_date' => $endDate->format('d-m-Y'),
-                'frequency' => $_SESSION['plan']['payment_frequency']
+                'frequency' => $_SESSION['model']
             ]
         ]);
     }
+    $_SESSION['order_request_body'] = $body;
+
+    $parsedReferrer = getUrlParts($_POST['referrer']);
+    $_SESSION['callback_redirect'] = $parsedReferrer['url'];
+    if($parsedReferrer['query']) {
+        $_SESSION['callback_redirect_query'] = $parsedReferrer['query'];
+    }
     
-    curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode($body));
-    $res = json_decode(curl_exec($curl), true);
-    if(!$res || !empty(curl_error($curl))) {
-        throw new Exception("Error submitting pesapal order request: " . stripslashes(curl_error($curl)), curl_getinfo($curl, CURLINFO_RESPONSE_CODE));
+    $res = submitOrderRequest($body, $logger);
+    // Create order
+    $orderDetail = [
+        "plan_id" => $_SESSION['plan']['id'],
+        "customer_id" => $customer['id'],
+        "currency" => $_SESSION['currency'],
+        "invoice_amount" => $_POST['total'],
+        "merchant_ref" => $res['merchant_reference'],
+        "tracking_id" => $res['order_tracking_id'],
+        "discounts" => $_SESSION['discounts']
+    ];
+    $_SESSION['merchant_ref'] = $res['merchant_reference'];
+    $_SESSION['tracking_id'] = $res['order_tracking_id'];
+
+    if($_SESSION['model'] !== 'ONETIME') {
+        $orderDetail['expiry'] = $endDate->format('Y-m-d H:i:s');
     }
-    if($res['status'] != 200) {
-        throw new Exception("Error submitting pesapal order request: " . $res['error']['code'], (int)$res['status']);
-    }
+
+    $retries = 3;
+    $order = null;
+    do {
+        try {
+            $order = create_order($pdo_conn, $orderDetail, $dbLogger);
+            $_SESSION['order'] = $order;
+        } catch (Exception $e) {
+            $dbLogger->critical("Failed to create order", [
+                'customer' => $_SESSION['customer']['id'], 
+                'plan' => $_SESSION['plan']['id'], 
+                'message' => $e->getMessage(), 
+                'retries_remaining' => $retries
+            ]);
+            $retries--;
+            if(!$retries) {
+                throw $e;
+            }
+        }
+    } while ($retries > 0 && !$order);
+
     $pdo_conn->commit();
+
     $_SESSION['step'] = 2;
     $_SESSION['redirectUrl'] = $res['redirect_url'];
     echo json_encode($res);
 } catch (Exception $e) {
     $pdo_conn->rollBack();
-    $apiLogger->critical("Failed to complete order request", ["message" => $e->getMessage()]);
+    $apiLogger->critical("Failed to create order", ["message" => $e->getMessage(), "customer" => $_SESSION['customer']['id'], "plan" => $_SESSION['plan']['id']]);
     respondWith(isHtmlStatusCode($e->getCode()) ? $e->getCode() : 500, $e->getMessage());
 } finally {
     if($pdo_conn->inTransaction()) {
         $pdo_conn->rollBack();
     }
-    curl_close($curl);
 }
