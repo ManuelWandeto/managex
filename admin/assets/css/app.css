@@ -1,0 +1,197 @@
+div.selected-files {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 1rem;
+    overflow-x: scroll;
+}
+div.selected-files::-webkit-scrollbar {
+    display: none;
+}
+
+div.file {
+    height: 160px;
+    min-width: 220px;
+    max-width: 300px;
+    position: relative;
+    cursor: pointer;
+    border-radius: var(--bs-card-border-radius);
+    overflow: hidden;
+    transition: all .2s ease-in;
+    background-color: #d0cfec;
+}
+div.file:hover {
+    box-shadow: var(--bs-card-box-shadow);
+
+}
+
+div.file img {
+    height: 100%;
+    width: 100%;
+    object-fit: contain;
+    object-position: center;
+
+}
+
+div.file .file-info {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    opacity: 0;
+    transition: all .2s ease-in;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    background: transparent;
+    color: white;
+    font-family: var(--bs-body-font-family);
+}
+div.file .file-info button.remove {
+    color: white;
+    border: 2px solid rgb(255, 208, 208);
+    height: 40px;
+    width: 40px;
+    border-radius: 50%;
+    background: transparent;
+
+}
+div.file:hover .file-info {
+    opacity: 1;
+    background: rgba(98, 95, 191, .9);
+}
+
+div.container-fluid div.row.clients {
+    flex-wrap: nowrap;
+    overflow-x: scroll;
+}
+
+div.clients div.client div.card {
+    position: relative;
+    height: 100%;
+} 
+div.clients div.client div.card div.logo-container {
+    height: 100%;
+    background: #ffffff;
+}
+div.clients div.client div.card div.logo-container img {
+    height: 100%;
+    object-fit: contain;
+    object-position: center;
+}
+
+div.clients div.client div.card div.card-body .drawable {
+    background: #fff;
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    padding: 1rem;
+    height: 80px;
+    overflow-y: hidden;
+    transition: all .25s ease-in;
+    border-radius: var(--bs-card-border-radius);
+    border-top-right-radius: 0;
+    border-top-left-radius: 0;
+
+}
+div.clients div.client div.card a.edit-client {
+    z-index: 99;
+}
+.drawable .more {
+    opacity: 0;
+    transition: all .3s ease-in;
+}
+div.clients div.client div.card:hover div.card-body .drawable {
+    height: 100%;
+    background: var(--bs-card-bg);
+    border-radius: var(--bs-card-border-radius);
+}
+div.clients div.client div.card:hover .drawable .more {
+    opacity: 1;
+}
+
+.modal div.client-images {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: scroll;
+    gap: 1rem;
+}
+
+.modal div.client-images img {
+    max-height: 400px;
+}
+button.icon-button {
+    border: none;
+    background: none;
+    font-size: 1.2rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    appearance: none;
+    outline: none;
+    transition: all .2s ease-in;
+}
+
+button.icon-button:hover {
+    transform: scale(1.3);
+    
+}
+
+.modal .modal-body pre {
+    font-size: 1rem;
+    width: 100%;
+    text-wrap: wrap;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+/* Loading spinner */
+
+.loader {
+    width: 32px;
+    height: 32px;
+    border: 3px dotted rgb(164, 198, 204);
+    border-style: solid solid dotted dotted;
+    border-radius: 50%;
+    display: inline-block;
+    position: relative;
+    box-sizing: border-box;
+    animation: rotation 2s linear infinite;
+  }
+  .loader::after {
+    content: '';  
+    box-sizing: border-box;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    margin: auto;
+    border: 3px dotted #FF3D00;
+    border-style: solid solid dotted;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    animation: rotationBack 1s linear infinite;
+    transform-origin: center center;
+  }
+      
+  @keyframes rotation {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  } 
+  @keyframes rotationBack {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(-360deg);
+    }
+  } 

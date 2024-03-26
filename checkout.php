@@ -102,7 +102,8 @@ $_SESSION['referral_discount'] = !empty($_SESSION['referral_discount']) ? $_SESS
 <body x-data="{currentStep, redirectUrl}">
     <nav class="navbar navbar-expand-lg fixed-top probootstrap-megamenu navbar-light probootstrap-navbar py-3" style="box-shadow: none;">
         <div class="container">
-            <a class="navbar-brand" href="index.html" title="Kingsoft" :class="currentStep === 3 && 'mx-auto'"></a>
+            <a class="navbar-brand" href="index.html" title="Kingsoft" :class="currentStep === 3 && 'mx-auto'" 
+                style="background-image: url('img/mgx_logo.png'); background-size: contain; width: 200px;"></a>
             <button class="btn text-icon-button" type="button" data-toggle="modal" data-target="#cancel-purchase-modal" x-show="currentStep < 3" x-cloak>
                 <i class="fa-solid fa-xmark text-danger"></i>
                 <span>Cancel</span>
@@ -209,42 +210,6 @@ $_SESSION['referral_discount'] = !empty($_SESSION['referral_discount']) ? $_SESS
                         >
                         <span class="text-danger" x-text="fields.phone.error"></span>
                     </div>
-                    <div class="form-group">
-                        <label for="adr"><i class="fa fa-address-card-o"></i> Address</label>
-                        <input type="text" id="adr" name="address" placeholder="542 W. 15th Street" class="form-control"
-                            x-model="fields.address.value" 
-                            :class="fields.address.error && 'border-danger'"
-                            @blur="validateField(fields.address)"
-                        >
-                        <span class="text-danger" x-text="fields.address.error"></span>
-                    </div>
-                    <div class="form-group">
-                        <label for="city"><i class="fa-solid fa-city"></i> City</label>
-                        <input type="text" id="city" name="city" placeholder="New York" class="form-control"
-                            x-model="fields.city.value" 
-                            :class="fields.city.error && 'border-danger'"
-                            @blur="validateField(fields.city)"
-                        >
-                        <span class="text-danger" x-text="fields.city.error"></span>
-                    </div>
-                    <div class="form-group">
-                        <label for="state"> <i class="fa-solid fa-flag"></i> State</label>
-                        <input type="text" id="state" name="state" placeholder="NY" class="form-control"
-                            x-model="fields.state.value" 
-                            :class="fields.state.error && 'border-danger'"
-                            @blur="validateField(fields.state)"
-                        >
-                        <span class="text-danger" x-text="fields.state.error"></span>
-                    </div>
-                    <div class="form-group">
-                        <label for="postal-code"><i class="fa-solid fa-location-dot"></i> Postal Code</label>
-                        <input type="text" id="postal-code" name="postal_code" placeholder="10001" class="form-control"
-                            x-model="fields.postalCode.value" 
-                            :class="fields.postalCode.error && 'border-danger'"
-                            @blur="validateField(fields.postalCode)"
-                        >
-                        <span class="text-danger" x-text="fields.postalCode.error"></span>
-                    </div>
                     <small style="font-size: 14px;"><i class="fa-regular fa-lightbulb mr-1"></i> Fields marked with (*) are <strong>required</strong></small>
                 </form>
                 <div x-show="formLoading" x-transition>
@@ -305,11 +270,13 @@ $_SESSION['referral_discount'] = !empty($_SESSION['referral_discount']) ? $_SESS
                     <i><i class="fa-solid fa-tags"></i></i>
                     <p class="mb-0">Use the code <strong style="color: #17a2b8;">EARLYBIRD</strong> to get <strong>5% OFF</strong> your price</p>
                 </div> -->
-                <div class="card py-4 px-3" x-data="{agreed: false}">
+                <div class="card py-4 px-3" x-data="{agreed: false}" @agree-license.window="()=>{
+                    agreed = true
+                }">
                     <div class="form-check mb-3">
                         <input class="form-check-input" type="checkbox" value="" id="terms" x-model="agreed">
                         <label class="form-check-label" for="terms">
-                            By clicking this, I agree to <a href="#">managex terms and conditions</a> and <a href="#">privacy policy</a>
+                            By clicking this, I agree to <a href="#" data-toggle="modal" data-target="#terms-and-conditions-modal">managex terms and conditions</a> and <a href="#">privacy policy</a>
                         </label>
                     </div>
                     
@@ -326,7 +293,7 @@ $_SESSION['referral_discount'] = !empty($_SESSION['referral_discount']) ? $_SESS
                     }" x-text="!error ? 'Continue to checkout' : 'Retry'" :disabled="!agreed"></button>
                 </div>
             </div>
-            
+            <?php require_once('views/terms_and_conditions_modal.php') ?>
         </div>
     </div>
     <div class="container" x-data="{error: transactionError}" x-show="currentStep === 2" x-cloak x-transition x-init="()=>{

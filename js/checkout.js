@@ -24,26 +24,6 @@ function checkoutFormData() {
                 value: null, error: null, rules: [
                     'optional', 'numeric'
                 ]
-            },
-            address: {
-                value: null, error: null, rules: [
-                    'optional'
-                ]
-            },
-            city: {
-                value: null, error: null, rules: [
-                    'optional'
-                ]
-            },
-            state: {
-                value: undefined, error: null, rules: [
-                    'optional'
-                ]
-            },
-            postalCode: {
-                value: null, error: null, rules: [
-                    'optional'
-                ]
             }
         },
         clearForm() {

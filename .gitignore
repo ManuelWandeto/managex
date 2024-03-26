@@ -4,3 +4,5 @@ payments/node_modules
 payments/dist
 vendor
 app.log
+admin/assets/libs/
+admin/html
