@@ -29,7 +29,7 @@ $_SESSION['discounts'] = [
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Kingsoft LTD</title>
+  <title>Kingsoft Company</title>
   <meta name="description" content="managex for SMEs featuring inventory, order, CRM, accounting, analytics and more.">
   <meta name="keywords"
     content="erp software, inventory management software, order management system, accounting software, analytics, dashboard, crm, small business software, smb software, manage inventory, purchase orders, sales orders, invoicing, financial reporting, profit and loss, accounts payable, accounts receivable, contact management, pipeline management, marketing automation, forecasts, pos integration, payroll">
@@ -91,6 +91,10 @@ $_SESSION['discounts'] = [
   })
   const videos = [
     {
+      title: "Quick sale with 2 levels of units",
+      link: "https://youtu.be/JTic_X52774?si=JMk0zubHxQHV-Wnc"
+    },
+    {
       title: "Creating users",
       link: "https://youtu.be/foGLwdL8Jkc?si=fweJZFeiCRwZMQRX"
     },
@@ -109,10 +113,6 @@ $_SESSION['discounts'] = [
     {
       title: "Store item balances & other stocks reports",
       link: "https://youtu.be/V3T9JT_gEYw?si=axQfuAOEDs4FHf9L"
-    },
-    {
-      title: "Quick sale with 2 levels of units",
-      link: "https://youtu.be/JTic_X52774?si=JMk0zubHxQHV-Wnc"
     }
   ]
 </script>
