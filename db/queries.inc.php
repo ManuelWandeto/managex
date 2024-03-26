@@ -95,19 +95,15 @@ function register_customer(PDO $pdo_conn, array $details, Logger $dbLogger) {
         }
         $sql = 
             "INSERT INTO customers 
-                (business_name, business_type, email, phone, address, city, state, postal_code)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?);";
+                (business_name, business_type, email, phone)
+            VALUES (?, ?, ?, ?);";
         
         $stmt = $pdo_conn->prepare($sql);
         $stmt->execute([
             $details['business_name'],
             $details['business_type'],
             $details['email'],
-            !empty($details['phone']) ? $details['phone'] : null,
-            !empty($details['address']) ? $details['address'] : null,
-            !empty($details['city']) ? $details['city'] : null,
-            !empty($details['state']) ? $details['state'] : null,
-            !empty($details['postal_code']) ? $details['postal_code'] : null,
+            !empty($details['phone']) ? $details['phone'] : null
         ]);
         $customerId = $pdo_conn->lastInsertId();
         return $pdo_conn->query("SELECT * FROM customers WHERE id = $customerId;")->fetch(PDO::FETCH_ASSOC);
