@@ -3,6 +3,7 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) {
   session_start();
+  session_unset();
 }
 
 require_once ("db/db.inc.php");
@@ -12,9 +13,8 @@ require_once ("utils/ip_localle.php");
 
 $_SESSION['referer'] = !empty ($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : NULL;
 $_SESSION['localle'] = getIpLocalle($dbLogger);
-$_SESSION['currency'] = explode(',', $_SESSION['localle']['country']['currency'])[0] == 'KES' ? 'KES' : 'USD';
-$_SESSION['plans'] = getPlans($pdo_conn, $_SESSION['currency'], $logger);
-$_SESSION['busuness_types'] = getBusinessTypes($pdo_conn, $logger);
+$_SESSION['plans'] = getPlans($pdo_conn, $logger);
+$_SESSION['business_types'] = getBusinessTypes($pdo_conn, $logger);
 $_SESSION['discounts'] = [
   [
     "valid" => true,
@@ -54,32 +54,18 @@ $_SESSION['discounts'] = [
 </head>
 <script>
   const plans = <?php echo json_encode($_SESSION['plans']); ?>;
-  console.log(plans)
-  const userCurrency = <?php echo json_encode($_SESSION['currency']);?>;
-  console.log(userCurrency)
   const localle = <?php echo json_encode($_SESSION['localle']); ?>;
-  const businessTypes = <?php echo json_encode($_SESSION['busuness_types']); ?>;
-  console.log(businessTypes)
+  const businessTypes = <?php echo json_encode($_SESSION['business_types']); ?>;
+  const currency = 'KES'
   document.addEventListener('alpine:init', () => {
     Alpine.store('plans', {
       list: plans.map(p => {
-
         return {
           id: p.id,
           name: p.name,
-          _model: Object.keys(p.pricing[0])[0],
-          pricing: p.pricing,
-          set model(name) {
-            this._model = name
-          },
-          get price() {
-            return this.pricing.find(pr => pr[this._model]).localle_price
-          },
-          get rawPrice() {
-            return this.pricing.find(pr => pr[this._model])[this._model]
-          },
+          price: p.price,
           get url() {
-            return new URLSearchParams(`plan=${p.id}&pricing=${this._model}`).toString()
+            return new URLSearchParams(`plan=${p.id}`).toString()
           }
         }
       }),
@@ -89,6 +75,18 @@ $_SESSION['discounts'] = [
       selectedTrial: 'SILVER',
     })
   })
+  async function makeInquiry(e) {
+      try {
+          const formData = new FormData(e.target)
+          const res = await axios.post(`api/add_inquiry.php`, formData)
+          if(!res.data?.id) {
+              throw new Error('Uncaught error sending inquiry')
+          }
+          return res.data
+      } catch (error) {
+          throw new Error(error?.response?.data ?? error);
+      }
+  }
   const videos = [
     {
       title: "Quick sale with 2 levels of units",
@@ -122,7 +120,7 @@ $_SESSION['discounts'] = [
   <!-- navbar-fixed-top  -->
   <nav class="navbar navbar-expand-lg fixed-top probootstrap-megamenu navbar-light bg-light probootstrap-navbar">
     <div class="container">
-      <a href="index.html" title="" class="navbar-brand"></a>
+      <a href="index.php" title="" class="navbar-brand"></a>
 
       <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbar-collapse"
         aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
@@ -140,10 +138,10 @@ $_SESSION['discounts'] = [
       <div id="navbar-collapse" class="navbar-collapse collapse">
         <hr class="d-lg-none">
         <ul class="navbar-nav ml-auto ">
-          <li class="nav-item active"><a href="#hero" class="nav-link">User Manual</a></li>
-          <li class="nav-item"><a href="#features" class="nav-link">How to install</a></li>
-          <li class="nav-item"><a href="#pricing" class="nav-link">How to activate</a></li>
-          <li class="nav-item"><a href="#pricing" class="nav-link">How to pay</a></li>
+          <li class="nav-item active"><a href="#hero" class="nav-link">Plans</a></li>
+          <li class="nav-item"><a href="#features" class="nav-link">Features</a></li>
+          <li class="nav-item"><a href="#video-illustrations" class="nav-link">Video Illustrations</a></li>
+          <!-- <li class="nav-item"><a href="#contact" class="nav-link">Contact</a></li> -->
           <!-- <li class="nav-item"><a href="#reviews" class="nav-link">Reviews</a></li> -->
           <!-- <li class="nav-item"><a href="#faq" class="nav-link">FAQ</a></li> -->
           <li class="nav-item"><a href="#contact" class="nav-link">Contact</a></li>
@@ -172,7 +170,7 @@ $_SESSION['discounts'] = [
           <div class="probootstrap-pricing bronze probootstrap-animate" data-animate-effect="fadeIn" x-data>
             <h3>BRONZE</h3>
             <div class="probootstrap-price-wrap">
-              <span class="probootstrap-price" x-data x-text="$store.plans.getPlan('BRONZE').price"></span>
+              <span class="probootstrap-price" x-data x-text="formatCurrency($store.plans.getPlan('BRONZE').price, 'KES')"></span>
               <span class="probootstrap-price-per-month">ONETIME</span>
             </div>
             <ul>
@@ -218,7 +216,7 @@ $_SESSION['discounts'] = [
             <h3>SILVER</h3>
 
             <div class="probootstrap-price-wrap">
-              <span class="probootstrap-price" x-data x-text="$store.plans.getPlan('SILVER').price"></span>
+              <span class="probootstrap-price" x-data x-text="formatCurrency($store.plans.getPlan('SILVER').price, 'KES')"></span>
               <span class="probootstrap-price-per-month">ONETIME</span>
             </div>
             <ul>
@@ -263,7 +261,7 @@ $_SESSION['discounts'] = [
 
             <h3>GOLD</h3>
             <div class="probootstrap-price-wrap">
-              <span class="probootstrap-price" x-data x-text="$store.plans.getPlan('GOLD').price"></span>
+              <span class="probootstrap-price" x-data x-text="formatCurrency($store.plans.getPlan('GOLD').price, 'KES')"></span>
               <span class="probootstrap-price-per-month">ONETIME</span>
 
             </div>
@@ -477,7 +475,7 @@ $_SESSION['discounts'] = [
         </div>
         <div class="modal-body" x-show="!customer && !error" x-transition>
           <div class="discount-ad mb-3" style="background-color: #7ed321; padding: 1.4rem 2rem; color: white; font-size: 1.2rem; border-radius: 8px;">
-            <p class="m-0">Get <strong>14% OFF</strong> and only pay <strong x-text="formatCurrency($store.plans.getPlan($store.plans.selectedTrial).rawPrice * .86, userCurrency)"></strong> if you 
+            <p class="m-0">Get <strong>14% OFF</strong> and only pay <strong x-text="formatCurrency($store.plans.getPlan($store.plans.selectedTrial).price * .86, currency)"></strong> if you 
               <a 
                 :href="`checkout.php?${$store.plans.getPlan($store.plans.selectedTrial).url}`" 
                 style="color: white; text-decoration: underline;"
@@ -650,133 +648,6 @@ $_SESSION['discounts'] = [
     </div>
   </section>
 
-  <!-- CLIENTS SECTIONS -->
-  <!-- <section class="probootstrap-section proboostrap-clients probootstrap-bg-white probootstrap-border-top">
-    <div class="container">
-      <div class="row">
-        <div class="col-md-6 section-heading probootstrap-animate">
-          <h2>Our Clients</h2>
-          <p class="lead">A list of some of our clients</p>
-         
-        </div>
-      </div>
-     
-      <div class="row">
-        <div class="col-md-3 col-sm-6 col-xs-6 text-center client-logo probootstrap-animate"
-          data-animate-effect="fadeIn">
-          <img src="img/client_1.png" class="img-responsive" alt="Free Bootstrap Template by uicookies.com">
-        </div>
-        <div class="col-md-3 col-sm-6 col-xs-6 text-center client-logo probootstrap-animate"
-          data-animate-effect="fadeIn">
-          <img src="img/client_2.png" class="img-responsive" alt="Free Bootstrap Template by uicookies.com">
-        </div>
-        <div class="clearfix visible-sm-block visible-xs-block"></div>
-        <div class="col-md-3 col-sm-6 col-xs-6 text-center client-logo probootstrap-animate"
-          data-animate-effect="fadeIn">
-          <img src="img/client_3.png" class="img-responsive" alt="Free Bootstrap Template by uicookies.com">
-        </div>
-        <div class="col-md-3 col-sm-6 col-xs-6 text-center client-logo probootstrap-animate"
-          data-animate-effect="fadeIn">
-          <img src="img/client_4.png" class="img-responsive" alt="Free Bootstrap Template by uicookies.com">
-        </div>
-
-      </div>
-    </div>
-  </section> -->
-
-  <!-- TESTIMONIALS -->
-  <!-- <section class="probootstrap-section probootstrap-border-top probootstrap-bg-white" id="reviews">
-    <div class="container">
-      <div class="row justify-content-center">
-        <div class="col-md-6 col-md-offset-3 text-center section-heading probootstrap-animate">
-          <h2>What People Say</h2>
-          <p class="lead">Some of the things our clients have said about it</p>
-        </div>
-      </div>
-      <div class="row">
-        <div class="col-md-4 probootstrap-animate" data-animate-effect="fadeIn">
-          <div class="probootstrap-testimony-wrap text-center">
-            <figure>
-              <img src="img/person_1.jpg" alt="Free Bootstrap Template by uicookies.com">
-            </figure>
-            <blockquote class="quote">&ldquo;Thanks to managex and its simplicity, I've been able to grow my business to
-              an average revenue of 22 million a year&rdquo; <cite class="author">&mdash; Super mama mboga <br>
-                <span>Director</span></cite></blockquote>
-
-          </div>
-        </div>
-        <div class="col-md-4 probootstrap-animate" data-animate-effect="fadeIn">
-          <div class="probootstrap-testimony-wrap text-center">
-            <figure>
-              <img src="img/person_2.jpg" alt="Free Bootstrap Template by uicookies.com">
-            </figure>
-            <blockquote class="quote">&ldquo;This app is like my second brain when it comes to business, I get to keep
-              track of everything in one neat place&rdquo; <cite class="author">&mdash; Steve Ajira <br>
-                <span>Accountant at Big Square</span></cite></blockquote>
-          </div>
-        </div>
-        <div class="col-md-4 probootstrap-animate" data-animate-effect="fadeIn">
-          <div class="probootstrap-testimony-wrap text-center">
-            <figure>
-              <img src="img/person_3.jpg" alt="Free Bootstrap Template by uicookies.com">
-            </figure>
-            <blockquote class="quote">&ldquo;Managex gives my business more than enough room to grow, The unlimited
-              monthly plan meets my needs adequately&rdquo; <cite class="author">&mdash; Frank Chimero <br>
-                <span>Director Noliyam fisheries</span></cite></blockquote>
-          </div>
-        </div>
-
-      </div>
-    </div>
-  </section> -->
-
-  <!-- F.A.Q SECTION -->
-  <!-- <section class="probootstrap-section probootstrap-bg-white probootstrap-zindex-above-showcase" id="faq">
-    <div class="container probootstrap-border-top">
-      <div class="row justify-content-center">
-        <div class="col-md-12 text-left section-heading probootstrap-animate">
-          <h2>Frequently Ask Questions</h2>
-        </div>
-      </div>
-      
-      <div class="row">
-        <div class="col-md-6 probootstrap-animate" data-animate-effect="fadeIn">
-          <h3>Lorem ipsum dolor sit amet?</h3>
-          <p>Lorem ipsum dolor sit amet consectetur adipisicing elit. Sunt repellendus minima reprehenderit tempore
-            nihil necessitatibus impedit dolorum non maiores totam amet. Eveniet voluptatum odio dolorem corrupti
-            nesciunt sed cum veniam.</p>
-          <h3>Incidunt earum quibusdam dolores?</h3>
-          <p>Mollitia repellendus quaerat consequuntur? Vero vel sint quia reprehenderit ex tempore soluta corrupti
-            voluptate quae cupiditate iusto perspiciatis eveniet culpa nesciunt modi rem. Officiis tempora sequi aut
-            enim laudantium quos.</p>
-          <h3>Hic a atque quibusdam?</h3>
-          <p>Maxime quaerat sapiente provident iste corporis aut eum dolorum sunt a ad tenetur sit non eligendi labore.
-            Illo animi accusantium nihil deserunt qui fugit officia quisquam sint ea amet. Sit?</p>
-          <h3>Cumque fugit repellat magni?</h3>
-          <p>Laudantium illo beatae nesciunt odio eligendi vitae quis molestias illum quas facilis. Voluptatum sunt
-            totam tempore a sit repellat aperiam culpa ratione cum explicabo beatae facere aspernatur maiores est
-            consectetur.</p>
-
-        </div>
-        <div class="col-md-6 probootstrap-animate" data-animate-effect="fadeIn">
-          <h3>Quibusdam voluptate?</h3>
-          <p>Alias optio? Eum beatae ea reiciendis laboriosam animi consequuntur quidem quia libero aliquam deserunt
-            ipsam officiis saepe ad dicta accusamus et earum commodi doloribus ipsum cupiditate dolorum ullam nulla
-            necessitatibus.</p>
-          <h3>Eveniet qui accusantium aspernatur?</h3>
-          <p>Possimus exercitationem odio repellendus quae repudiandae dolores delectus doloribus debitis maxime ab
-            atque cum expedita minima suscipit quis perspiciatis impedit sit ratione qui beatae corrupti neque nostrum
-            asperiores. Suscipit ullam.</p>
-          <h3>Maxime consequatur ipsam?</h3>
-          <p>Quam expedita sed velit id saepe aliquid natus sunt eum modi et dolorum ex incidunt debitis itaque
-            voluptatem voluptatum perspiciatis molestiae cupiditate nemo reiciendis laborum tenetur placeat cum! Ducimus
-            recusandae.</p>
-        </div>
-      </div>
-
-    </div>
-  </section> -->
-
   <!-- CONTACT BANNER -->
   <section class="probootstrap-hero probootstrap-xs-hero probootstrap-hero-colored" id="contact">
     <div class="container">
@@ -800,9 +671,32 @@ $_SESSION['discounts'] = [
   <section class="probootstrap-section probootstrap-bg-white">
     <div class="container">
       <div class="row">
-        <div class="col-md-5 probootstrap-animate" data-animate-effect="fadeIn">
+        <div class="col-md-5 probootstrap-animate" data-animate-effect="fadeIn" x-data="{formLoading: false}">
           <h2>Drop us a line</h2>
-          <form action="#" method="post" class="probootstrap-form">
+          <form action="#" method="post" class="probootstrap-form" x-data @submit.prevent="()=>{
+            formLoading = true
+            makeInquiry($event).then(inquiry => {
+              document.getElementById('inquiry-response').innerHTML = `
+              <div class='alert alert-success alert-dismissible fade show' role='alert'>
+                We have received your message, thank you!
+                <button type='button' class='close' data-dismiss='alert' aria-label='Close'>
+                  <span aria-hidden='true'>&times;</span>
+                </button>
+              </div>
+              `
+            }).catch(e=> {
+              document.getElementById('inquiry-response').innerHTML = `
+              <div class='alert alert-danger alert-dismissible fade show' role='alert'>
+                An error occured sending your message, please try again!
+                <button type='button' class='close' data-dismiss='alert' aria-label='Close'>
+                  <span aria-hidden='true'>&times;</span>
+                </button>
+              </div>
+              `
+            }).finally(() =>{
+              formLoading = false
+            })
+          }">
             <div class="form-group">
               <label for="name">Full Name</label>
               <input type="text" class="form-control" id="name" name="name">
@@ -812,15 +706,16 @@ $_SESSION['discounts'] = [
               <input type="email" class="form-control" id="email" name="email">
             </div>
             <div class="form-group">
-              <label for="subject">Subject</label>
-              <input type="text" class="form-control" id="subject" name="subject">
+              <label for="phone">Phone</label>
+              <input type="text" class="form-control" id="phone" name="phone">
             </div>
             <div class="form-group">
-              <label for="message">Message</label>
-              <textarea cols="30" rows="10" class="form-control" id="message" name="message"></textarea>
+              <label for="message">Message *</label>
+              <textarea cols="30" rows="10" class="form-control" id="message" name="message" placeholder="Only the message is required but other details are appreciated."></textarea>
             </div>
-            <div class="form-group">
+            <div class="form-group d-flex align-items-center" style="gap: 1rem;">
               <input type="submit" class="btn btn-primary btn-lg" id="submit" name="submit" value="Submit Form">
+              <span class="loader" x-show="formLoading" x-cloak x-transition></span>
             </div>
           </form>
         </div>
@@ -834,7 +729,9 @@ $_SESSION['discounts'] = [
             <li><i class="icon-email"></i><span>info@kingsoft.biz</span></li>
             <li><i class="icon-phone"></i><span>0729 089 638</span></li>
           </ul>
-          
+          <div id="inquiry-response">
+            
+          </div>
         </div>
       </div>
     </div>
