@@ -8,7 +8,7 @@ require_once("../db/db.inc.php");
 try {
     $download_id = !empty($_GET['download_id']) ? $_GET['download_id'] : NULL;
     if(!$download_id) {
-        redirect("https://drive.google.com/uc?export=download&id=1GadlQxYSpK5g8rLNaJJ8lhNnsUe30Hx6");
+        redirect("https://mega.nz/file/4b8zHACA#kwEqQLOe2ybFVKSVsuRfZobIoUDL-KtkztzR6eWwo48");
     }
 
     $sql = 
@@ -20,7 +20,7 @@ try {
         $download_id
     ]);
 
-    redirect("https://drive.google.com/uc?export=download&id=1GadlQxYSpK5g8rLNaJJ8lhNnsUe30Hx6");
+    redirect("https://mega.nz/file/4b8zHACA#kwEqQLOe2ybFVKSVsuRfZobIoUDL-KtkztzR6eWwo48");
 
 } catch (Exception $e) {
     $dbLogger->error("Error updating download status", ['message' => $e->getMessage()]);
