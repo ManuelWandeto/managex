@@ -8,15 +8,8 @@ require_once("db/queries.inc.php");
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
-if(empty($_GET['plan']) && empty($_GET['pricing']) && empty($_SESSION['plan']) && empty($_SESSION['model'])) {
+if(empty($_GET['plan'])) {
     redirect("./index.php");
-}
-$transactionError = null;
-if(isset($_GET["error"])) {
-    // display login errors
-    if($_GET["error"] == "transaction error") {
-        $transactionError = "An error occured processing your payment, please try again";
-    }
 }
 
 function get_plan(array $plans, int $plan_id) {
@@ -27,13 +20,11 @@ function get_plan(array $plans, int $plan_id) {
 }
 
 $plan_id = $_GET['plan'];
-$_SESSION['model'] = !empty($_SESSION['model']) ? $_SESSION['model'] : $_GET['pricing'];
 $_SESSION['plan'] = get_plan($_SESSION['plans'], $plan_id);
 
 $_SESSION['discounts'] = !empty($_SESSION['discounts']) ? array_filter($_SESSION['discounts'], function ($discount) {
     return new DateTime() < new DateTime($discount['expiry']);
 }) : [];
-$_SESSION['referral_discount'] = !empty($_SESSION['referral_discount']) ? $_SESSION['referral_discount'] : NULL;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -69,25 +60,22 @@ $_SESSION['referral_discount'] = !empty($_SESSION['referral_discount']) ? $_SESS
 </head>
 <script>
     const plan = <?php echo json_encode($_SESSION['plan']);?>;
-    const currency = <?php echo json_encode($_SESSION['currency']);?>;
-    const model = <?php echo json_encode($_SESSION['model']);?>;
     const checkoutDiscounts = <?php echo json_encode($_SESSION['discounts']);?>;
-    const referralDiscount = <?php echo json_encode($_SESSION['referral_discount']);?>;
-    const transactionError = <?php echo json_encode($transactionError);?>;
-    const businessTypes = <?php echo json_encode($_SESSION['busuness_types']); ?>;
-
+    const transactionError = <?php echo json_encode(!empty($_SESSION['transaction_error']) ? $_SESSION['transaction_error'] : NULL);?>;
+    console.log(transactionError)
+    const businessTypes = <?php echo json_encode($_SESSION['business_types']); ?>;
+    const currency = 'KES'
     const startDate = moment()
     let endDate =null
-    if(model.toUpperCase() !== 'ONETIME') {
-        endDate = moment().add(1, model[0])
-    }
     let currentStep = <?php echo json_encode(!empty($_SESSION['step']) ? $_SESSION['step'] : 1);?>;
-    let redirectUrl = <?php echo json_encode(!empty($_SESSION['redirectUrl']) ? $_SESSION['redirectUrl'] : NULL);?>;
+    let order = <?php echo json_encode(!empty($_SESSION['order']) ? $_SESSION['order'] : NULL);?>;
+    console.log('order', order)
     let checkoutRes = <?php echo json_encode(!empty($_SESSION['checkout_response']) ? $_SESSION['checkout_response'] : NULL);?>;
+
     let customer = <?php echo json_encode(!empty($_SESSION['customer']) ? $_SESSION['customer'] : NULL);?>;
     document.addEventListener('alpine:init', () => {
         Alpine.store('price', {
-          price: plan.pricing.find(pr => pr[model])[model],
+          price: plan.price,
           discounts: [...checkoutDiscounts],
           get total() {
             const totalFraction = 1 - this.discounts.reduce((acc, discount) => {
@@ -99,10 +87,10 @@ $_SESSION['referral_discount'] = !empty($_SESSION['referral_discount']) ? $_SESS
         })
     })
 </script>
-<body x-data="{currentStep, redirectUrl}">
+<body x-data="{currentStep, order}">
     <nav class="navbar navbar-expand-lg fixed-top probootstrap-megamenu navbar-light probootstrap-navbar py-3" style="box-shadow: none;">
         <div class="container">
-            <a class="navbar-brand" href="index.html" title="Kingsoft" :class="currentStep === 3 && 'mx-auto'" 
+            <a class="navbar-brand" href="index.php" title="Kingsoft" :class="currentStep === 3 && 'mx-auto'" 
                 style="background-image: url('img/mgx_logo.png'); background-size: contain; width: 200px;"></a>
             <button class="btn text-icon-button" type="button" data-toggle="modal" data-target="#cancel-purchase-modal" x-show="currentStep < 3" x-cloak>
                 <i class="fa-solid fa-xmark text-danger"></i>
@@ -158,7 +146,7 @@ $_SESSION['referral_discount'] = !empty($_SESSION['referral_discount']) ? $_SESS
                 <form id="billing-details" x-show="!formLoading && !error" x-transition action="api/order.php" method="POST" @submit.prevent="() => {
                     formLoading = true
                     submit($event).then(data => {
-                        redirectUrl = data.redirect_url
+                        order = data
                         currentStep++
                     }).catch(e => {
                         error = e
@@ -241,11 +229,11 @@ $_SESSION['referral_discount'] = !empty($_SESSION['referral_discount']) ? $_SESS
                         </div>
                         <div class="summary-info">
                             <span>Ends</span>
-                            <h4 class="m-0" x-text="model === 'ONETIME' ? 'Never' : endDate.format('DD-MM-YYYY')"></h4>
+                            <h4 class="m-0" x-text="endDate ? endDate.format('DD-MM-YYYY') : 'Never'"></h4>
                         </div>
                         <div class="summary-info">
                             <span>Price</span>
-                            <h4 class="m-0" x-text="plan.pricing.find(pr => pr[model]).localle_price"></h4>
+                            <h4 class="m-0" x-text="formatCurrency(plan.price, currency)"></h4>
                         </div>
                         <hr>
                         <div class="card-title">
@@ -276,7 +264,7 @@ $_SESSION['referral_discount'] = !empty($_SESSION['referral_discount']) ? $_SESS
                     <div class="form-check mb-3">
                         <input class="form-check-input" type="checkbox" value="" id="terms" x-model="agreed">
                         <label class="form-check-label" for="terms">
-                            By clicking this, I agree to <a href="#" data-toggle="modal" data-target="#terms-and-conditions-modal">managex terms and conditions</a> and <a href="#">privacy policy</a>
+                            By clicking this, I agree to <a href="#" data-toggle="modal" data-target="#terms-and-conditions-modal">managex terms and conditions.</a>
                         </label>
                     </div>
                     
@@ -301,13 +289,66 @@ $_SESSION['referral_discount'] = !empty($_SESSION['referral_discount']) ? $_SESS
             error = checkoutRes.description
         }
     }">
-        <h3 class="mb-2">Checkout with pesapal</h3>
-        <template x-if="currentStep === 2 && redirectUrl && !error">
-            <iframe :src="redirectUrl" width="100%" height="800px">
-                <!-- Alternative content for browsers that do not support iframes -->
-                <p>Your browser does not support iframes. Proceed with checkout <a :href="redirectUrl">here <i class="icon icon-new-tab"></i></a></p>
-            </iframe>
+        <template x-if="order && !checkoutRes && !error">
+            <div class="row justify-content-center text-center">
+                <div class="col-md-6">
+                    <h3 class="mb-2">Checkout via M-PESA</h3>
+                    <p>We curently support mpesa payments only, other methods coming soon.</p>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Payment details</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="summary">
+                                <div class="summary-info">
+                                    <span>Paybill</span>
+                                    <h4>522522</h4>
+                                </div>
+                                <div class="summary-info">
+                                    <span>Account</span>
+                                    <h4>5889112</h4>
+                                </div>
+                                <div class="summary-info">
+                                    <span>Amount</span>
+                                    <h4 x-text="formatCurrency(order.invoice_amount - order.paid_amount, currency)"></h4>
+                                </div>
+                            </div>
+                            <hr>
+                            <form :action="`controllers/process_payment.php?tracking_id=${order.tracking_id}`" method="POST">
+                                <div class="form-group">
+                                    <label for="confirmation">Your Confirmation Code</label>
+                                    <input type="text" id="confirmation" class="form-control" placeholder="M-pesa code" required name="confirmation_code">
+                                </div>
+                                <button type="submit" class="btn btn-primary w-100">Submit</button>
+                            </form>
+                        </div>
+                        <div class="card-footer">
+                            <small style="font-size: 14px;">
+                                <i class="fa-regular fa-lightbulb mr-1"></i> 
+                                Please <strong>do not overpay or underpay</strong>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                <!-- <div class="col-md-6">
+                    <h3 class="mb-2">Your Confirmation Code</h3>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Confirmation Code</h3>
+                        </div>
+                        <div class="card-body">
+                            <form action="">
+                                <div class="form-group">
+                                    <label for="confirmation">Your Confirmation Code</label>
+                                    <input type="text" id="confirmation" class="form-control">
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div> -->
+            </div>
         </template>
+       
         <template x-if="checkoutRes && error">
             <div class="row">
                 <div class="col-md-6 col-lg-4">
@@ -324,12 +365,8 @@ $_SESSION['referral_discount'] = !empty($_SESSION['referral_discount']) ? $_SESS
                                 <h4 class="m-0" x-text="checkoutRes.payment_status_description"></h4>
                             </div>
                             <div class="summary-info">
-                                <span>Method</span>
-                                <h4 class="m-0" x-text="checkoutRes.payment_method"></h4>
-                            </div>
-                            <div class="summary-info">
-                                <span>Account</span>
-                                <h4 class="m-0" x-text="checkoutRes.payment_account"></h4>
+                                <span>Confirmation</span>
+                                <h4 class="m-0" x-text="checkoutRes.confirmation_code"></h4>
                             </div>
                             <div class="summary-info">
                                 <span>Amount</span>
@@ -353,9 +390,7 @@ $_SESSION['referral_discount'] = !empty($_SESSION['referral_discount']) ? $_SESS
                         background="transparent" speed="1" style="width: 100%; height: 300px;" loop autoplay></dotlottie-player>
                     <button class="btn btn-primary mt-2 py-2 px-3 rounded" @click="()=>{
                         retrying = true;
-                        redirectUrl = null;
-                        retryPayment().then(data => {
-                            redirectUrl = data.redirect_url
+                        retryPayment(order.tracking_id).then(data => {
                             error = null
                             checkoutRes = null
                         }).catch((e)=>{
@@ -393,9 +428,7 @@ $_SESSION['referral_discount'] = !empty($_SESSION['referral_discount']) ? $_SESS
                         background="transparent" speed="1" style="width: 100%; height: 300px;" loop autoplay></dotlottie-player>
                     <button class="btn btn-primary mt-1 mb-4 py-2 px-3 rounded" @click="()=>{
                         retrying = true;
-                        redirectUrl = null;
-                        retryPayment().then(data => {
-                            redirectUrl = data.redirect_url
+                        retryPayment(order.tracking_id).then(data => {
                             error = null
                             checkoutRes = null
                         }).catch((e)=>{
@@ -442,12 +475,8 @@ $_SESSION['referral_discount'] = !empty($_SESSION['referral_discount']) ? $_SESS
                                 <h4 class="m-0" x-text="checkoutRes.payment_status_description"></h4>
                             </div>
                             <div class="summary-info">
-                                <span>Method</span>
-                                <h4 class="m-0" x-text="checkoutRes.payment_method"></h4>
-                            </div>
-                            <div class="summary-info">
-                                <span>Account</span>
-                                <h4 class="m-0" x-text="checkoutRes.payment_account"></h4>
+                                <span>Confirmation</span>
+                                <h4 class="m-0" x-text="checkoutRes.confirmation_code"></h4>
                             </div>
                             <div class="summary-info">
                                 <span>Amount</span>
@@ -497,9 +526,7 @@ $_SESSION['referral_discount'] = !empty($_SESSION['referral_discount']) ? $_SESS
                     <dotlottie-player src="https://lottie.host/fad7868a-fe30-449e-a16e-5cae26c9eb4f/haWLqbDK3w.json" background="transparent" speed="1" style="width: 100%; height: 300px;" loop autoplay></dotlottie-player>
                     <button class="btn-primary mt-2 py-2 px-3 rounded mt-3" @click="()=>{
                         window.location.href = `controllers/download.php?download_id=${checkoutRes.download_id}`
-                    }">Download Managex v4.19</button>
-                    <a href="#">View Older Versions</a>
-                    <h5 class="text-center mt-4">You have been enrolled to the <strong x-text="plan.name"></strong> plan.</h5> 
+                    }">Download Managex</button>
                     <p class="text-center mt-1" style="font-size: 1rem;">
                         The download link has also been sent to your email: <strong x-text="customer.email"></strong>
                     </p>
