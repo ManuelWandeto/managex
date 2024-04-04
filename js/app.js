@@ -24,10 +24,14 @@ function formatCurrency(value, currency) {
         currency,
     }).format(value);
 }
-async function retryPayment(url = "api/order_retry.php") {
+async function retryPayment(trackingId, type = 'order') {
     try {
+        let url = `api/order_retry.php?tracking_id=${trackingId}`
+        if(type !== 'order') {
+            url += "&type=custom"
+        }
         const res = await axios.get(url)
-        if(!res.data.status || res.data.status != 200) {
+        if(!res.data.tracking_id) {
             throw new Error('Uncaught error retrying order request')
         }
         return res.data
