@@ -50,17 +50,13 @@ function checkoutFormData() {
         async submit(e) {
             try {
                 const formData = new FormData(e.target)
-                formData.set("start_date", startDate.format('YYYY-MM-DD HH:mm:ss'));
-                if(endDate) {
-                    formData.set("end_date", endDate.format('YYYY-MM-DD HH:mm:ss'));
-                }
                 formData.set("total", Alpine.store('price').total);
                 if(Alpine.store('price').discounts.length) {
                     formData.set("discounts", Alpine.store('price').discounts.map(d => d.id));
                 }
                 formData.set('referrer', window.location.href)
                 const res = await axios.post("api/order.php", formData)
-                if(!res.data.status || res.data.status != 200) {
+                if(!res.data.tracking_id) {
                     throw new Error('Uncaught error handling order request')
                 }
                 return res.data
