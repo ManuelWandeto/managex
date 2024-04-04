@@ -40,37 +40,16 @@ function getBusinessTypes(PDO $pdo_conn, Logger $dbLogger) {
         throw new Exception("Could not get business types!", 500);
     }
 }
-function getPlans(PDO $pdo_conn, string $currency, Logger $dbLogger) {
+function getPlans(PDO $pdo_conn, Logger $dbLogger) {
     try {
         $sql = 
             "SELECT 
-                p.id,
-                p.name,
-                p.plan_color,
-                CONCAT('[', GROUP_CONCAT( DISTINCT
-                    JSON_OBJECT(pr.payment_frequency, pr.price)
-                ), ']') AS pricing
-            FROM plans p
-            JOIN plan_pricing pr ON p.id = pr.plan
-            GROUP BY p.id;";
-        $plans =  $pdo_conn->query($sql)->fetchAll(PDO::FETCH_ASSOC);
-        $results = [];
-        foreach ($plans as $plan) {
-            $pricing = [];
-            foreach (json_decode($plan['pricing']) as $price) {
-                foreach ($price as $key => $value) {
-                    $convertedPrice = convert_currrency($currency, $value, $dbLogger);
-                    $pricing[] = [$key => $convertedPrice, 'localle_price' => format_money(
-                            $currency === 'KES' ? 'KES' : 'USD', 
-                            $currency === 'KES' ? 'en_KE' : 'en_US', 
-                            $convertedPrice
-                        )
-                    ];
-                }
-            }
-            $results[] = array_merge($plan, ['pricing' => $pricing]);
-        }
-        return $results;
+                id,
+                name,
+                plan_color,
+                price
+            FROM plans;";
+        return $pdo_conn->query($sql)->fetchAll(PDO::FETCH_ASSOC);
     } catch (Exception $e) {
         $dbLogger->critical("Error getting plans", ['message' => $e->getMessage()]);
         throw new Exception("Could not get pricing plans!", 500);
@@ -115,16 +94,30 @@ function register_customer(PDO $pdo_conn, array $details, Logger $dbLogger) {
 function register_payment(PDO $pdo_conn, array $details, Logger $dbLogger) {
     try {
         $sql = 
-            "INSERT INTO payments (client_email, client_phone, currency, amount_paid) VALUES (?, ?, ?, ?);";
+            "INSERT INTO payments (reference_code, client_email, client_phone, currency, amount_paid) VALUES (?, ?, ?, ?, ?);";
         $stmt = $pdo_conn->prepare($sql);
         $stmt->execute([
+            $details['confirmation_code'],
             $details['email'],
             !empty($details['phone']) ? $details['phone'] : NULL,
             $details['currency'],
             $details['amount'],
         ]);
         $paymentId = $pdo_conn->lastInsertId();
-        return $pdo_conn->query("SELECT * FROM payments WHERE payment_id = $paymentId")->fetch(PDO::FETCH_ASSOC);
+        return $pdo_conn->query(
+            "
+            SELECT
+                p.`payment_id`,
+                c.`business_name` AS customer_name,
+                c.`email` AS customer_mail,
+                p.`reference_code` AS confirmation_code,
+                p.`amount_paid` AS paid_amount,
+                p.`currency`
+            FROM payments p
+            JOIN customers c ON p.`client_email` = c.`email`
+            WHERE payment_id = $paymentId;
+            "
+        )->fetch(PDO::FETCH_ASSOC);
     } catch (Exception $e) {
         $dbLogger->critical("Error registering new payment", ['message' => $e->getMessage(), "email" => $details['email'], "amount" => $details['amount']]);
         throw $e;
@@ -197,8 +190,8 @@ function send_mail(?PDO $email_conn, array $details, Logger $dbLogger) {
 function create_order(PDO $pdo_conn, array $details, Logger $dbLogger) {
     try {
         $sql = 
-            "INSERT INTO orders (plan, customer, expiry, currency, invoice_amount, merchant_ref, tracking_id )
-            VALUES (?, ?, ?, ?, ?, ?, ?);";
+            "INSERT INTO orders (plan, customer, expiry, currency, invoice_amount, tracking_id )
+            VALUES (?, ?, ?, ?, ?, ?);";
         $stmt = $pdo_conn->prepare($sql);
         $stmt->execute([
             $details['plan_id'],
@@ -206,7 +199,6 @@ function create_order(PDO $pdo_conn, array $details, Logger $dbLogger) {
             !empty($details['expiry']) ? $details['expiry'] : NULL,
             $details['currency'],
             $details['invoice_amount'],
-            $details['merchant_ref'],
             $details['tracking_id'],
         ]);
         $id = $pdo_conn->lastInsertId();
@@ -228,13 +220,14 @@ function create_order(PDO $pdo_conn, array $details, Logger $dbLogger) {
 function create_payment_request(PDO $pdo_conn, array $details, Logger $dbLogger) {
     try {
         $sql = 
-            "INSERT INTO payment_requests (request_email, currency, amount)
-            VALUES (?, ?, ?);";
+            "INSERT INTO payment_requests (request_email, currency, amount, tracking_id)
+            VALUES (?, ?, ?, ?);";
         $stmt = $pdo_conn->prepare($sql);
         $stmt->execute([
             $details['email'],
             $details['currency'],
-            $details['amount']
+            $details['amount'],
+            getRandomString(40)
         ]);
         $id = $pdo_conn->lastInsertId();
         return $pdo_conn->query("SELECT * FROM payment_requests WHERE request_id = $id;")->fetch(PDO::FETCH_ASSOC);
@@ -243,30 +236,40 @@ function create_payment_request(PDO $pdo_conn, array $details, Logger $dbLogger)
         throw $e;
     }
 }
-
-function complete_order(PDO $pdo_conn, ?PDO $email_conn, array $details, Logger $dbLogger) {
+function confirm_mpesa_payment(PDO $mpesa_conn, string $confirmation_code, Logger $dbLogger) {
+    try {
+        $stmt = $mpesa_conn->prepare("SELECT * FROM offline_mpesa_data WHERE client_id = ? AND confirmation_code = ?;");
+        $stmt->execute([
+            "b16m",
+            $confirmation_code
+        ]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        $dbLogger->critical("Failed to confirm mpesa payments", ["confirmation_code" => $confirmation_code, "message" => $e->getMessage()]);
+        throw $e;
+    }
+}
+function complete_order(PDO $pdo_conn, array $details, Logger $dbLogger) {
     try {
         $completedOrder = null;
-        $sentmail = null;
         $retries = 3;
-        $success = false;
         do {
             try {
-                $pdo_conn->beginTransaction();
                 if(!$completedOrder) {
-                    $stmt = $pdo_conn->prepare("UPDATE orders SET paid_amount = ?, download_id = ? WHERE merchant_ref = ? AND tracking_id = ?;");
+                    $stmt = $pdo_conn->prepare("UPDATE orders SET paid_amount = ?, confirmation_code = ?, download_id = ? WHERE tracking_id = ?;");
                     $stmt->execute([
-                        $details['amount'],
+                        !empty($details['paid_amount']) ? $details['paid_amount'] : NULL,
+                        $details['confirmation_code'],
                         $details['download_id'],
-                        $details['merchantRef'],
-                        $details['trackingId']
+                        $details['tracking_id']
                     ]);
                     $stmt = $pdo_conn->prepare(
                         "SELECT 
                             o.id as order_id,
+                            o.invoice_amount,
                             o.paid_amount,
+                            o.confirmation_code,
                             o.currency,
-                            o.merchant_ref,
                             o.tracking_id,
                             c.id as customer_id,
                             c.business_name as customer_name,
@@ -278,126 +281,64 @@ function complete_order(PDO $pdo_conn, ?PDO $email_conn, array $details, Logger 
                         FROM orders o
                         JOIN customers c ON c.id = o.customer
                         JOIN plans p ON p.id = o.plan
-                        WHERE tracking_id = ? AND merchant_ref = ?;"
+                        WHERE tracking_id = ?;"
                     );
-                    $stmt->execute(([$details['trackingId'], $details['merchantRef']]));
+                    $stmt->execute(([$details['tracking_id']]));
                     $completedOrder = $stmt->fetch(PDO::FETCH_ASSOC);
 
                     if(!$completedOrder) {
                         throw new Exception("UNCAUGHT error completing customer's order", 500);
                     }
-                    if($completedOrder) {
-                        register_payment($pdo_conn, [
-                            "email" => $completedOrder['customer_mail'],
-                            "phone" => $completedOrder['customer_phone'],
-                            "currency" => $completedOrder['currency'],
-                            "amount" => $completedOrder['paid_amount'],
-                        ], $dbLogger);
-                    }
                 }
-                // send confirmation mail
-                if($completedOrder && !$sentmail) {
-                    $confirmationMail = file_get_contents(__DIR__ . '/../email_templates/confirmation.html');
-                    $parsedMail = str_replace([
-                        "{customer_name}",
-                        "{plan_name}",
-                        "plan_color",
-                        "{download_id}"
-                    ], [
-                        $completedOrder['customer_name'],
-                        $completedOrder['plan_name'],
-                        $completedOrder['plan_color'],
-                        !empty($details['download_id']) ? $details['download_id'] : NULL,
-                    ], $confirmationMail);
-
-                    $sentmail = send_mail($email_conn, [
-                        "to" => $completedOrder['customer_mail'],
-                        "about" => "Order Confirmation",
-                        "message" => $parsedMail
-                    ], $dbLogger);
-                }
-                
-                $success = true;
-                $pdo_conn->commit();
-            } catch (Exception $e) {  
-                $pdo_conn->rollBack();  
+                return $completedOrder;
+            } catch (Exception $e) {    
                 $retries--;
                 if(!$retries) {
                     throw $e;
                 }
             }
-        } while($retries > 0 && !$success);
+        } while($retries > 0);
         
         return true;
     } catch (Exception $e) {
         $dbLogger->critical("Failed to complete customer's order", [
-            'merchant_ref' => $details['merchantRef'],
-            "tracking_id" => $details['trackingId'], 
+            "tracking_id" => $details['tracking_id'], 
             'message' => $e->getMessage()
         ]);
         throw $e;
     }
 }
-function complete_payment_request(PDO $pdo_conn, ?PDO $email_conn, array $details, Logger $dbLogger) {
+function complete_payment_request(PDO $pdo_conn, array $details, Logger $dbLogger) {
     try {
-        $completedRequest = null;
-        $retries = 3;
-        $success = false;
-        do {
-            try {
-                $pdo_conn->beginTransaction();
-                if(!$completedRequest) {
-                    
-                    $stmt = $pdo_conn->prepare("SELECT * FROM payment_requests WHERE tracking_id = ? AND merchant_ref = ?;");
-                    $stmt->execute([
-                        $details['trackingId'],
-                        $details['merchantRef']
-                    ]);
-                    $record = $stmt->fetch(PDO::FETCH_ASSOC);
-                    if(!$record) {
-                        throw new Exception("No record found for the given tracking/merchant ref", 404);
-                    }
-                    $stmt = $pdo_conn->prepare("UPDATE payment_requests SET is_paid = ? WHERE merchant_ref = ? AND tracking_id = ?;");
-                    $stmt->execute([
-                        'Yes',
-                        $details['merchantRef'],
-                        $details['trackingId']
-                    ]);
-                    $stmt = $pdo_conn->prepare(
-                        "SELECT * FROM payment_requests WHERE merchant_ref = ? AND tracking_id = ?;"
-                    );
-                    $stmt->execute(([$details['merchantRef'], $details['trackingId']]));
-                    $completedRequest = $stmt->fetch(PDO::FETCH_ASSOC);
 
-                    if(!$completedRequest) {
-                        throw new Exception("UNCAUGHT error completing payment request", 500);
-                    }
-                    register_payment($pdo_conn, [
-                        "email" => $completedRequest['request_email'],
-                        "currency" => $completedRequest['currency'],
-                        "amount" => $completedRequest['amount'],
-                    ], $dbLogger);
-                }
-                // TODO: send confirmation mail
-                $success = true;
-                $pdo_conn->commit();
-            } catch (Exception $e) {
-                if($e->getCode() == 400) {
-                    throw $e;
-                }
-                $pdo_conn->rollBack();  
-                $retries--;
-                if(!$retries) {
-                    throw $e;
-                }
-            }
-        } while($retries > 0 && !$success);
-        
-        return true;
+        $stmt = $pdo_conn->prepare("UPDATE payment_requests SET is_paid = ?, confirmation_code = ? WHERE tracking_id = ?;");
+        $stmt->execute([
+            !empty($details['is_paid']) ? $details['is_paid'] : 'no',
+            $details['confirmation_code'],
+            $details['tracking_id']
+        ]);
+        $stmt = $pdo_conn->prepare(
+            "SELECT 
+                c.`business_name` AS customer_name,
+                c.`phone` AS customer_phone,
+                pr.`request_email` AS customer_mail,
+                pr.`amount` AS invoice_amount,
+                pr.`currency`,
+                pr.`confirmation_code`,
+                pr.`tracking_id`
+            FROM payment_requests pr
+            JOIN customers c ON pr.`request_email` = c.`email`  
+            WHERE tracking_id = ?;"
+        );
+        $stmt->execute(([$details['tracking_id']]));
+        $completedRequest = $stmt->fetch(PDO::FETCH_ASSOC);
+        if(!$completedRequest) {
+            throw new Exception("UNCAUGHT error completing payment request", 500);
+        }
+        return $completedRequest;
     } catch (Exception $e) {
         $dbLogger->critical("Failed to complete payment request", [
-            'merchant_ref' => $details['merchantRef'],
-            "tracking_id" => $details['trackingId'], 
+            "tracking_id" => $details['tracking_id'], 
             'message' => $e->getMessage()
         ]);
         throw $e;
@@ -418,6 +359,106 @@ function create_discount(PDO $pdo_conn, array $details, Logger $dbLogger) {
         return $pdo_conn->query("SELECT * FROM discounts WHERE id = $id;")->fetch(PDO::FETCH_ASSOC);
     } catch (Exception $e) {
         $dbLogger->error("Failed to create refferral discount", ['customer' => $_SESSION['customer']['id'], 'plan' => $_SESSION['plan']['id'], 'message' => $e->getMessage()]);
+        throw $e;
+    }
+}
+
+function add_payment(PDO $pdo_conn, array $details, Logger $dbLogger) {
+    try {
+        $record = null;
+        $stmt = $pdo_conn->prepare(
+            "SELECT * FROM orders WHERE confirmation_code = ?;"
+        );
+        $stmt->execute([$details['confirmation_code']]);
+        $record = $stmt->fetch(PDO::FETCH_ASSOC);
+        if(!empty($record['paid_amount'])) {
+            throw new Exception("Payment for this order has already been verified!", 400);
+        }
+        if(!$record) {
+            $stmt = $pdo_conn->prepare("SELECT * FROM payment_requests WHERE confirmation_code = ?;");
+            $stmt->execute([$details['confirmation_code']]);
+            $record = $stmt->fetch(PDO::FETCH_ASSOC);
+            if($record && strtolower($record['is_paid']) === 'yes') {
+                throw new Exception("Payment for this request has already been verified!", 400);
+            }
+        }
+        
+        if(!$record) {
+            throw new Exception("No order or payment request found for the given confirmation code", 404);
+        }
+        if(!empty($record['request_id'])) {
+            $completedRequest = complete_payment_request($pdo_conn, [
+                "is_paid" => 'Yes',
+                "tracking_id" => $record['tracking_id'],
+                "confirmation_code" => $record['confirmation_code']
+            ], $dbLogger);
+            if(!$completedRequest) {
+                throw new Exception("UNCAUGHT error completing payment request");
+            }
+            return register_payment($pdo_conn, [
+                "confirmation_code" => $details['confirmation_code'],
+                "phone" => $completedRequest['customer_phone'],
+                "email" => $record['request_email'],
+                "currency" => $record['currency'],
+                "amount" => $details['amount']
+            ], $dbLogger);
+            // add payment
+        } else {
+            $completedOrder = complete_order($pdo_conn, [
+                "paid_amount" => $details['amount'],
+                "tracking_id" => $record['tracking_id'],
+                "confirmation_code" => $record['confirmation_code'],
+                "download_id" => $record['download_id']
+            ], $dbLogger);
+            if(!$completedOrder) {
+                throw new Exception("UNCAUGHT error completing order");
+            }
+            return register_payment($pdo_conn, [
+                "confirmation_code" => $details['confirmation_code'],
+                "email" => $completedOrder['customer_mail'],
+                "phone" => $completedOrder['customer_phone'],
+                "currency" => $completedOrder['currency'],
+                "amount" => $completedOrder['paid_amount']
+            ], $dbLogger);
+        }
+    } catch (Exception $e) {
+        $dbLogger->critical("Failed to add payment", [
+            "confirmation_code" => $details['confirmation_code'], 
+            'message' => $e->getMessage()
+        ]);
+        throw $e;
+    }
+}
+
+function get_pending_codes(PDO $pdo_conn, Logger $dbLogger) {
+    try {
+        $sql = 
+            "
+            SELECT 
+                created_at,
+                invoice_amount,  
+                confirmation_code,
+                paid_amount,
+                NULL AS is_paid,
+                currency
+            FROM orders
+            WHERE paid_amount IS NULL AND confirmation_code IS NOT NULL
+            UNION
+            SELECT 
+                creation_date AS created_at,
+                amount AS invoice_amount,
+                confirmation_code,
+                NULL AS paid_amount,
+                is_paid,
+                currency
+            FROM payment_requests pr
+            WHERE is_paid = 'no' AND confirmation_code IS NOT NULL;
+            ";
+        return $pdo_conn->query($sql)->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        $dbLogger->error("Failed to get unverified payments", [ 
+            'message' => $e->getMessage()
+        ]);
         throw $e;
     }
 }
