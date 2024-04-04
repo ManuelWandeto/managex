@@ -35,13 +35,13 @@ try {
                 "referrer" => !empty($_SESSION['referer']) ? $_SESSION['referer'] : NULL,
                 "customer_id" => $customer['id'],
                 "plan_id" => $plan['id'],
-                "is_paid" => false,
+                "is_paid" => 0,
             ], $dbLogger);
             
             create_payment_request($pdo_conn, [
                 "email" => $customer['email'],
-                "currency" => $_SESSION['currency'],
-                "amount" => (float)$plan["pricing"][0]['ONETIME'] * 0.86,
+                "currency" => "KES",
+                "amount" => (float)$plan["price"] * 0.86,
             ], $dbLogger);
             
             // send mail
