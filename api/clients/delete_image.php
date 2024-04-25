@@ -1,7 +1,7 @@
 <?php
 
 require_once('../../db/db.inc.php');
-require_once('../../db/queries/clients.inc.php');
+require_once('../../db/clients.inc.php');
 require_once('../../utils/respond.php');
 require_once('../../utils/logger.php');
 
@@ -12,7 +12,7 @@ $apiLogger->info('Delete client image request');
   //If json_decode failed, the JSON is invalid.
 if( is_array($decoded)) {
     try {
-        $ok = deleteImage($conn, $decoded, $dbLogger);
+        $ok = deleteImage($pdo_conn, $decoded, $dbLogger);
         if (!$ok) {
             throw new Exception("Failed to delete image: ". $decoded['image'], 500);
         }
