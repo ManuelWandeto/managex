@@ -4,6 +4,7 @@ require_once("utils/redirect.php");
  
 require_once("db/db.inc.php");
 require_once("db/queries.inc.php");
+require_once ("utils/load_env.php");
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -25,6 +26,8 @@ $_SESSION['plan'] = get_plan($_SESSION['plans'], $plan_id);
 $_SESSION['discounts'] = !empty($_SESSION['discounts']) ? array_filter($_SESSION['discounts'], function ($discount) {
     return new DateTime() < new DateTime($discount['expiry']);
 }) : [];
+$megaUser = ["username" => $_ENV['MEGA_USERNAME'], "password" => $_ENV['MEGA_PASSWORD']];
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -56,6 +59,9 @@ $_SESSION['discounts'] = !empty($_SESSION['discounts']) ? array_filter($_SESSION
     <script src="https://cdn.jsdelivr.net/npm/@caneara/iodine@8.5.0/dist/iodine.min.umd.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script src="js/vendor/moment.min.js"></script>
+    <script src="js/vendor/main.browser-umd.js"></script>
+
+    <script src="js/download.js"></script>
     <script src="js/checkout.js"></script>
 </head>
 <script>
@@ -71,6 +77,9 @@ $_SESSION['discounts'] = !empty($_SESSION['discounts']) ? array_filter($_SESSION
     let order = <?php echo json_encode(!empty($_SESSION['order']) ? $_SESSION['order'] : NULL);?>;
     console.log('order', order)
     let checkoutRes = <?php echo json_encode(!empty($_SESSION['checkout_response']) ? $_SESSION['checkout_response'] : NULL);?>;
+    console.log(checkoutRes)
+    const mgxDefaultVersion = <?php echo json_encode($_SESSION['default_version']); ?>;
+    const megaUser = <?php echo json_encode($megaUser); ?>;
 
     let customer = <?php echo json_encode(!empty($_SESSION['customer']) ? $_SESSION['customer'] : NULL);?>;
     document.addEventListener('alpine:init', () => {
@@ -522,11 +531,29 @@ $_SESSION['discounts'] = !empty($_SESSION['discounts']) ? array_filter($_SESSION
                         </div>
                     </template>
                 </div>
-                <div class="col-md-6 col-lg-8 card align-items-center justify-content-center px-4">
+                <div class="col-md-6 col-lg-8 card align-items-center justify-content-center px-4" x-data="{downloadLoading: false}">
                     <dotlottie-player src="https://lottie.host/fad7868a-fe30-449e-a16e-5cae26c9eb4f/haWLqbDK3w.json" background="transparent" speed="1" style="width: 100%; height: 300px;" loop autoplay></dotlottie-player>
-                    <button class="btn-primary mt-2 py-2 px-3 rounded mt-3" @click="()=>{
-                        window.location.href = `controllers/download.php?download_id=${checkoutRes.download_id}`
-                    }">Download Managex</button>
+                    
+                    <div><span class="loader" x-show="downloadLoading" x-cloak x-transition></span></div>
+                    
+                    <a class="btn btn-primary position-relative mt-3" x-data="{progress: null}" @download-progress.window="()=>{
+                        progress = $event.detail
+                    }" href="#" @click="()=>{
+                        downloadLoading = true
+                        downloadManagex(mgxDefaultVersion.link, megaUser).then(() => {
+                            updateDownloadStatus(checkoutRes.download_id).catch(e => console.error(e))
+                        })
+                    }" style="background-color: #C3EE95;" @download-started.window="downloadLoading = false"
+                    >
+                        <span style="position: relative; z-index: 1000;">
+                            Download <span x-data x-text="mgxDefaultVersion.full_name"></span>
+                            <span class="ml-2" x-show="progress" x-cloak x-text="`(${Math.round(progress?.percentComplete)}%)`"></span>
+                        </span>
+                        <div class="overlay position-absolute" style="top: 0; bottom: 0; left: 0; background-color: #7ed321; display: flex; justify-content: center; align-items: center;" :style="{width: `${progress?.percentComplete || 0}%`}"></div>
+                    </a>
+                    <a href="#" data-toggle="modal" data-target="#change-log-modal" class="mt-2">View Changelog</a>
+                    <a href="#" data-toggle="modal" data-target="#tutorialModal" class="mt-2">View Installation tutorial</a>
+
                     <p class="text-center mt-1" style="font-size: 1rem;">
                         The download link has also been sent to your email: <strong x-text="customer.email"></strong>
                     </p>
@@ -534,7 +561,25 @@ $_SESSION['discounts'] = !empty($_SESSION['discounts']) ? array_filter($_SESSION
             </div>
         </template>
     </div>
-    
+    <div class="modal fade" id="change-log-modal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><span x-data x-text="mgxDefaultVersion.full_name.replace(/\.[^/.]+$/, '');"></span> Changelog</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p x-data x-text="mgxDefaultVersion.upgrade_info"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+            </div>
+        </div>
+    </div>
+    <?php require_once('views/tutorial_modal.php') ?>
     </script>
     <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.4.1/dist/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
