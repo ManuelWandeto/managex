@@ -134,6 +134,8 @@ if(!isset($_SESSION['user_id'])) {
         <?php
           if(!isset($_GET['page']) || $_GET['page'] == 'dashboard') {
             require_once('pages/dashboard.php');
+          } else {
+            require_once('pages/analytics.php');
           } else if(!isset($_GET['page']) || $_GET['page'] == 'analytics') {
             require_once('pages/analytics.php');
           } else if(!isset($_GET['page']) || $_GET['page'] == 'clients') {

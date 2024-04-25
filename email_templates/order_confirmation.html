@@ -40,9 +40,12 @@
     >
         <h1 class="my-4 ">Welcome to Managex</h1>
         <p>
-            Dear {customer_name}, you have successfully subscribed to the {plan_name} plan. <br> You now have unlimited access to managex. Download the setup through the link below.
+            Dear {customer_name}, your confirmation code <q style="background-color: #ddd; padding: .2rem .4rem; display: inline-block; border-radius: 4px;">{confirmation_code}</q> for mpesa payment of {invoice_amount} has been received. 
+            <br> Download managex on the link below, you will have your license once your payment is verified.
         </p>
-        <a class="btn btn-primary w-25 mx-auto mt-4" href='https://kingsoft.biz/controllers/download.php?download_id={download_id}'
+        <p>For any inquiries, please contact: <strong>0727 430 448</strong>.</p>
+        
+        <a class="btn btn-primary w-25 mx-auto mt-4" href='https://kingsoft.biz/managex_download.php?download_id={download_id}'
         style="background-color: plan_color; padding: .4rem 2rem; width: 150px; border-radius: 4px; text-decoration: none; color: black; margin: 1rem auto; display: block;">Download Now</a>
         <hr style="width: 40%;">
         <div class="socials" style="margin: 1rem 0;">

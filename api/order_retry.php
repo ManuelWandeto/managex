@@ -8,61 +8,29 @@ require_once(__DIR__ . '/../utils/pesapal_order.php');
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
-$apiLogger->info("Retry order request", ['trackingId' => $_SESSION['tracking_id'], 'merchantRef' => $_SESSION['merchant_ref']]);
+if(!isset($_GET['tracking_id'])) {
+    respondWith(500, "Tracking ID not set");
+    
+}
+$trackingId = $_GET['tracking_id'];
+$apiLogger->info("Retry order request", ['trackingId' => $trackingId]);
 $paymentType = isset($_GET['type']) ? $_GET['type'] : 'order';
 
 try {
-    $res = submitOrderRequest(array_merge($_SESSION['order_request_body'], ['id' => getRandomString(40)]), $logger);
-    // Update existing order with new tracking ID and merchant ref
-    $retries = 3;
-    $success = false;
-    do {
-        try {
-            // TODO: get tracking id and merchant ref from session order object
-            $table = $paymentType == 'order' ? "orders" : "payment_requests";
-            $stmt = $pdo_conn->prepare("SELECT * FROM $table WHERE tracking_id = ? AND merchant_ref = ?;");
-            $stmt->execute([
-                $_SESSION['tracking_id'],
-                $_SESSION['merchant_ref']
-            ]);
-            $record = $stmt->fetch(PDO::FETCH_ASSOC);
-            if(!$record) {
-                throw new Exception("No record found for the given tracking/merchant ref", 404);
-            }
-            $sql = 
-                "UPDATE $table SET tracking_id = ?, merchant_ref = ? WHERE tracking_id = ? AND merchant_ref = ?;";
-            $stmt = $pdo_conn->prepare($sql);
-            $stmt->execute([
-                $res['order_tracking_id'],
-                $res['merchant_reference'],
-                $_SESSION['tracking_id'],
-                $_SESSION['merchant_ref']
-            ]);
 
-            $_SESSION['merchant_ref'] = $res['merchant_reference'];
-            $_SESSION['tracking_id'] = $res['order_tracking_id'];
-            $success = true;
-        } catch (Exception $e) {
-            if($e->getCode() == 400) {
-                throw $e;
-            }
-            $retries--;
-            if(!$retries) {
-                $dbLogger->critical("Failed to update existing order for retry", [
-                    'paymentType' => $paymentType, 
-                    'trackingId' => $_SESSION['tracking_id'], 
-                    'merchantRef' => $_SESSION['merchant_ref'],
-                    'message' => $e->getMessage(),  
-                ]);
-                throw $e;
-            }
-        }
-    } while ($retries > 0 && !$success);
+    $table = $paymentType == 'order' ? "orders" : "payment_requests";
+    $stmt = $pdo_conn->prepare("SELECT * FROM $table WHERE tracking_id = ?;");
+    $stmt->execute([
+        $trackingId
+    ]);
+    $order = $stmt->fetch(PDO::FETCH_ASSOC);
+    if(!$order) {
+        throw new Exception("No order found for the given tracking ref", 404);
+    }
 
-    $_SESSION['redirectUrl'] = $res['redirect_url'];
     $_SESSION['checkout_response'] = NULL;
     $_SESSION['transaction_error'] = NULL;
-    echo json_encode($res);
+    echo json_encode($order);
 } catch (Exception $e) {
     $apiLogger->critical("Failed to complete retry order request", ["message" => $e->getMessage(), "paymentType" => $paymentType]);
     respondWith(isHtmlStatusCode($e->getCode()) ? $e->getCode() : 500, $e->getMessage());

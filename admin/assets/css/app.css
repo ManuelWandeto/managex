@@ -153,6 +153,15 @@ button.icon-button:hover {
     overflow-y: auto;
 }
 
+.card .pending-code .confirmation,
+.card .pending-code .amount {
+    font-size: 1rem;
+    
+}
+.card .pending-code .amount {
+    font-weight: 500;
+}
+
 /* Loading spinner */
 
 .loader {
