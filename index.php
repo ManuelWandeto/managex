@@ -81,7 +81,6 @@ $megaUser = ["username" => $_ENV['MEGA_USERNAME'], "password" => $_ENV['MEGA_PAS
   const mgxDefaultVersion = <?php echo json_encode($_SESSION['default_version']); ?>;
   const megaUser = <?php echo json_encode($megaUser); ?>;
 
-  const currency = 'KES'
   document.addEventListener('alpine:init', () => {
     Alpine.store('plans', {
       list: plans.map(p => {
