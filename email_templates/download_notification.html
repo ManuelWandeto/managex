@@ -4,12 +4,15 @@
 <head>
     <script src="https://kit.fontawesome.com/f95e1afe0c.js" crossorigin="anonymous"></script>
 
-    <title>Order Confirmed</title>
+    <title>New Download</title>
 </head>
 <style>
     h1, h2, h4 {
         font-family: Verdana, Geneva, Tahoma, sans-serif;
         color: rgb(15, 15, 15);
+    }
+    h4 {
+        display: inline-block;
     }
     p {
         font-family: Georgia, 'Times New Roman', Times, serif;
@@ -18,6 +21,9 @@
     hr {
         margin-top: 1.5rem;
         margin-bottom: 1.5rem;
+    }
+    ul li {
+        list-style: none;
     }
 </style>
 <body style="height: 100%; background: #121420; margin: 0; padding: 0;">
@@ -38,22 +44,25 @@
         padding: 2rem;
         text-align: center;"
     >
-        <h1 class="my-4 ">Welcome to Managex</h1>
-        <p>
-            Dear {customer_name}, your confirmation code <q style="background-color: #ddd; padding: .2rem .4rem; display: inline-block; border-radius: 4px;">{confirmation_code}</q> for mpesa payment of {invoice_amount} has been received. 
-            <br> Download managex on the link below, you will have your license once your payment is verified.
-        </p>
-        <p>For any inquiries, please contact: <strong>0727 430 448</strong>.</p>
-        
-        <a class="btn btn-primary w-25 mx-auto mt-4" href='https://kingsoft.biz/managex_download.php?download_id={download_id}'
-        style="background-color: plan_color; padding: .4rem 2rem; width: 150px; border-radius: 4px; text-decoration: none; color: black; margin: 1rem auto; display: block;">Download Now</a>
-        <hr style="width: 40%;">
-        <div class="socials" style="margin: 1rem 0;">
-            <h4>Follow us on</h4>
-            <a href="https://www.facebook.com/KingsoftCompany" >
-                <img style="width: 24px; height: 24px;" src="https://kingsoft.biz/img/icons/facebook.png" alt="">
-            </a>
-        </div>
+        <h1 class="my-4 ">New Download <img src="https://kingsoft.biz/img/icons/confetti.png" alt="Confetti" style="height: 24px;"></h1>
+        <p>A {download_type} download has just been completed!</p>
+        <ul>
+            <li>
+                <h4>Business name:</h4> <span>{customer_name}</span>
+            </li>
+            <li>
+                <h4>Business mail:</h4> <span>{customer_mail}</span>
+            </li>
+            <li>
+                <h4>Country:</h4> <span>{country_name}</span>
+            </li>
+            <li>
+                <h4>Version:</h4> <span>{version}</span>
+            </li>
+            <li>
+                <h4>Downloaded at:</h4> <span>{download_time}</span>
+            </li>
+        </ul>
     </div>
     <div style="padding: 1rem 0; text-align: center; color: white;">
         <small>© Kingsoft Company | Nairobi, Kiambu rd, Ciata City Mall Opposite Ridgeways</small><br>
