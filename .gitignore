@@ -6,3 +6,7 @@ vendor
 app.log
 admin/assets/libs/
 admin/html
+managex_docs/
+mgx_docs/
+managex_training_docs/
+uploads/
