@@ -27,9 +27,11 @@ $paymentType = isset($_GET['type']) ? $_GET['type'] : 'order';
 $order = null;
 
 if($paymentType == 'custom') {
-    
-    $stmt = $pdo_conn->prepare("SELECT * FROM payment_requests WHERE tracking_id = ?");
-    $stmt->execute([$trackingId]);
+        
+    $stmt = $pdo_conn->prepare("SELECT * FROM payment_requests WHERE tracking_id = ?;");
+    $stmt->execute([
+        $trackingId
+    ]);
     $payment_request = $stmt->fetch(PDO::FETCH_ASSOC);
     if($payment_request) {
         $order = [
@@ -141,6 +143,7 @@ try {
                             : "Your confirmation has been received, Your payment will reflect in managex as soon as it's verified (atmost 1 business day)",
                     "confirmation_code" => $confirmation_code,
                     "currency" => "KES",
+                    "download_id" => $download['id'],
                     "amount" => $order['invoice_amount'],
                     "created_date" => date("Y-m-d H:i:s")
                 ];
