@@ -1,10 +1,9 @@
 <?php 
 use Monolog\Logger;
-require_once('../../utils/constants.php');
+require_once( __DIR__ . '/../utils/constants.php');
 require_once('utils.inc.php');
 function addClient(PDO $conn, array $client, Logger $logger) {
     $logo_path = null;
-    $uploadedImages = [];
     $clientsTable = CLIENTS_TABLE;
     try {
         $logo_path = uploadLogo($client['client_name']);
@@ -12,32 +11,28 @@ function addClient(PDO $conn, array $client, Logger $logger) {
         $logger->withName('uploads')->error('Error uploading client logo', ['message' => $e->getMessage()]);
         throw $e;
     }
-    try {
-        $uploadedImages = uploadImages($client['client_name']);
-    } catch (Exception $e) {
-        $logger->withName('uploads')->error('Error uploading client images', ['message' => $e->getMessage()]);
-    }
     $clientsTable = CLIENTS_TABLE;
     try {
         $record = queryRow($conn, 'Client exists', "SELECT * FROM $clientsTable WHERE `name` = ?;", $client["client_name"]);
         if($record) {
             throw new Exception("Client with name {$client['client_name']} already exists!", 400);
         }
-        $sql = "INSERT INTO $clientsTable (`name`, `testimonial`, `logo`, `installation_year`, `images`) VALUES (?, ?, ?, ?, ?);";
+        $sql = "INSERT INTO $clientsTable (`name`, `logo`, social) VALUES (?, ?, ?);";
         $stmt = $conn->prepare($sql);
         $stmt->execute([
             $client['client_name'],
-            $client['testimonial'],
             $logo_path,
-            strlen($client['installation_year']) ? $client['installation_year'] : null,
-            count($uploadedImages) ? json_encode($uploadedImages) : null
+            json_encode([
+                "platform" => $client['platform'],
+                "link" => $client['platform_link']
+            ])
         ]);
         $id = $conn->lastInsertId();
         $newClient = queryRow($conn, "Get new client", "SELECT * FROM $clientsTable WHERE id = ?;", $id);
         if(!$newClient) {
             throw new Exception('Could not get new client', 500);
         }
-        $newClient['images'] = json_decode($newClient['images']);
+        $newClient['social'] = json_decode($newClient['social']);
         return $newClient;
     } catch (Exception $e) {
         $logger->error(`Error adding new client`, ['message'=>$e->getMessage()]);
@@ -52,8 +47,8 @@ function getClients(PDO $conn, Logger $logger) {
         $clients = [];
         if(count($results)) {
             foreach ($results as $row) {
-                if($row['images']) {
-                    $row['images'] = json_decode($row['images']);
+                if($row['social']) {
+                    $row['social'] = json_decode($row['social']);
                 }
                 $clients[] = $row;
             }
@@ -119,51 +114,6 @@ function uploadLogo($client) {
 
 }
 
-function uploadImages($client) {
-    if (!isset($_FILES['client_images']['name'])) {
-        throw new Exception("client_images is not set", 500);
-    }
-    $files = array_filter($_FILES['client_images']['name']);
-    $paths = [];
-    $total = count($files);
-    if(!$total) {
-        return [];
-    }
-    $upload_dir = UPLOAD_PATH . $client . DIRECTORY_SEPARATOR . 'images' . DIRECTORY_SEPARATOR;
-
-    for ($i=0; $i < $total; $i++) { 
-        if($_FILES['client_images']['error'][$i] === UPLOAD_ERR_OK) {
-            if (!file_exists($upload_dir)) {
-                mkdir($upload_dir, 0777, true);
-            }
-            $filename = $_FILES['client_images']['name'][$i];
-            $tempPath = $_FILES['client_images']['tmp_name'][$i];
-            $filepath = $upload_dir . basename($_FILES['client_images']['name'][$i]);
-            // check if file already exists
-            if (file_exists($filepath)) {
-                unlink($filepath);
-            };
-            // check if file is not of an accepted type
-            if (strpos($_FILES['client_images']['type'][$i], 'image/') !== 0) {
-                throw new Exception("$filename is not of an accepted type, only documents and images", 400);
-            }
-            if ($tempPath) {
-                if(move_uploaded_file($tempPath, $filepath)) {
-                    $paths[] = basename($filepath);
-                } else {
-                    throw new Exception("error moving file to destination", 500);
-                }
-            } else {
-                throw new Exception("error reading temp path of file", 500);
-            }
-        } else {
-            $file = $_FILES['client_images']['name'][$i];
-
-            handleUploadError($file, $_FILES['client_images']['error'][$i]);
-        }
-    }
-    return $paths;
-}
 
 function deleteImage(PDO $conn, array $data, Logger $logger) {
     $clientsTable = CLIENTS_TABLE;
@@ -213,22 +163,14 @@ function updateClient(PDO $conn, array $client, Logger $logger) {
             throw $e;
         }
     }
-    if($_FILES['client_images']['name']) {
-        try {
-            $uploadedImages = uploadImages($client['client_name']);
-        } catch (Exception $e) {
-            $logger->withName('uploads')->error('Error uploading client images', ['message' => $e->getMessage()]);
-        }
-        $clientsTable = CLIENTS_TABLE;
-    }
     try {
         $record = queryRow($conn, 'Client exists', "SELECT * FROM $clientsTable WHERE `id` = ?;", $client["id"]);
         if(!$record) {
             throw new Exception("Client with given id doesn't!", 400);
         }
-        $sql = "UPDATE $clientsTable SET `name` = ?, `testimonial` = ?, `logo` = ?, `installation_year` = ?, `images` = ? WHERE id = ?;";
+        $sql = "UPDATE $clientsTable SET `name` = ?, `logo` = ?, `socials` = ? WHERE id = ?;";
         $stmt = $conn->prepare($sql);
-        $existingImages = json_decode($record['images']) ?? [];
+
         if($logo_path) {
             $filepath = UPLOAD_PATH . $record['name'] . DIRECTORY_SEPARATOR . $record['logo'];
             if(file_exists($filepath)) {
@@ -237,19 +179,20 @@ function updateClient(PDO $conn, array $client, Logger $logger) {
         }
         $stmt->execute([
             $client['client_name'],
-            $client['testimonial'],
             $logo_path ?? $record['logo'],
-            strlen($client['installation_year']) ? $client['installation_year'] : null,
-            count($uploadedImages) 
-                ? json_encode(array_merge($existingImages, $uploadedImages)) 
-                : (count($existingImages) ? $record['images'] : null ),
-            $client["id"]
+            json_encode([
+                "platform" => $client['platform'],
+                "link" => $client['platform_link']
+            ]),
+            $client["id"],
         ]);
         $updatedClient = queryRow($conn, "Get updated client", "SELECT * FROM $clientsTable WHERE id = ?;", $client["id"]);
+        if ($updatedClient['social']) {
+            $updatedClient['social'] = json_decode($updatedClient['social']);
+        }
         if(!$updatedClient) {
             throw new Exception('Could not get updated client', 500);
         }
-        $updatedClient['images'] = json_decode($updatedClient['images']);
         return $updatedClient;
     } catch (Exception $e) {
         $logger->error(`Error updating client`, ['message'=>$e->getMessage()]);
