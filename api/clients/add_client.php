@@ -1,16 +1,16 @@
 <?php
 
 require_once('../../db/db.inc.php');
-require_once('../../db/queries/clients.inc.php');
+require_once('../../db/clients.inc.php');
 require_once('../../utils/respond.php');
 require_once('../../utils/logger.php');
 
 $apiLogger->info('Add client request');
 
 try {
-    $client = addClient($conn, $_POST, $dbLogger);
+    $client = addClient($pdo_conn, $_POST, $dbLogger);
     if (!$client) {
-        throw new Exception("no new client returned", 500);
+        throw new Exception("Uncaught error adding client", 500);
     }
     echo json_encode($client);
 } catch (Exception $e) {
