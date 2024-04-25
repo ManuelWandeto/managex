@@ -10,6 +10,7 @@ require_once ("db/db.inc.php");
 require_once ("db/queries.inc.php");
 require_once ("utils/logger.php");
 require_once ("utils/ip_localle.php");
+require_once ("utils/load_env.php");
 
 $_SESSION['referer'] = !empty ($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : NULL;
 $_SESSION['localle'] = getIpLocalle($dbLogger);
@@ -24,15 +25,25 @@ $_SESSION['discounts'] = [
     "expiry" => "2024-12-01 00:00:00"
   ]
 ];
+$_SESSION['default_version'] = $pdo_conn->query("SELECT * FROM versions WHERE is_default = 1 ORDER BY creation_date DESC LIMIT 1;")->fetch(PDO::FETCH_ASSOC);
+$megaUser = ["username" => $_ENV['MEGA_USERNAME'], "password" => $_ENV['MEGA_PASSWORD']];
 ?>
 
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Kingsoft Company</title>
-  <meta name="description" content="managex for SMEs featuring inventory, order, CRM, accounting, analytics and more.">
+  <title>Kingsoft Co LTD</title>
+  <meta name="description" 
+    content="Your all-in-one solution for efficient business management. From Point of Sale (POS) to Inventory Management, 
+    streamline operations with our customizable software. Explore finance tools, generate invoices, and gain insights into your business performance. 
+    discover the power of Managex today!"
+  >
   <meta name="keywords"
-    content="erp software, inventory management software, order management system, accounting software, analytics, dashboard, crm, small business software, smb software, manage inventory, purchase orders, sales orders, invoicing, financial reporting, profit and loss, accounts payable, accounts receivable, contact management, pipeline management, marketing automation, forecasts, pos integration, payroll">
+    content="Point of Sale software, Point of Sale software in Kenya, Sales system, inventory management software, Finance and accounting system, Business finance management software,
+    quotations and invoicing software, Financial tools, Retail software solution, Efficient business management software,
+    order management system, analytics, dashboard, CRM, small business management software, SME management software manage inventory, purchase orders, sales orders, invoicing, 
+    financial reporting, profit and loss, accounts payable, accounts receivable, contact management, pipeline management, marketing automation, forecasts, 
+    pos integration, payroll">
   <link rel="icon" type="image/x-icon" href="/img/favicon.ico">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Poppins:400,500,700">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.4.1/dist/css/bootstrap.min.css"
@@ -41,12 +52,22 @@ $_SESSION['discounts'] = [
   <link rel="stylesheet" href="css/template-style.css">
   <link rel="stylesheet" href="css/style.css">
   <script src="https://kit.fontawesome.com/f95e1afe0c.js" crossorigin="anonymous"></script>
+  
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+     crossorigin=""/>
+   <!-- Make sure you put this AFTER Leaflet's CSS -->
+ <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+     crossorigin=""></script>
 
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@caneara/iodine@8.5.0/dist/iodine.min.umd.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-
+  <script defer src="js/vendor/main.browser-umd.js"></script>
+  <script src="js/download.js"></script>
   <script src="js/checkout.js"></script>
+  <script src="js/store.js"></script>
   <!--[if lt IE 9]>
       <script src="js/vendor/html5shiv.min.js"></script>
       <script src="js/vendor/respond.min.js"></script>
@@ -56,6 +77,10 @@ $_SESSION['discounts'] = [
   const plans = <?php echo json_encode($_SESSION['plans']); ?>;
   const localle = <?php echo json_encode($_SESSION['localle']); ?>;
   const businessTypes = <?php echo json_encode($_SESSION['business_types']); ?>;
+  const currency = 'KES'
+  const mgxDefaultVersion = <?php echo json_encode($_SESSION['default_version']); ?>;
+  const megaUser = <?php echo json_encode($megaUser); ?>;
+
   const currency = 'KES'
   document.addEventListener('alpine:init', () => {
     Alpine.store('plans', {
@@ -144,6 +169,8 @@ $_SESSION['discounts'] = [
           <!-- <li class="nav-item"><a href="#contact" class="nav-link">Contact</a></li> -->
           <!-- <li class="nav-item"><a href="#reviews" class="nav-link">Reviews</a></li> -->
           <!-- <li class="nav-item"><a href="#faq" class="nav-link">FAQ</a></li> -->
+          <li class="nav-item"><a href="managex_training_docs" class="nav-link" target="_blank">User Manual</a></li>
+          <li class="nav-item"><a href="docs" class="nav-link" target="_blank">Hotelex Manual</a></li>
           <li class="nav-item"><a href="#contact" class="nav-link">Contact</a></li>
 
         </ul>
@@ -172,6 +199,9 @@ $_SESSION['discounts'] = [
             <div class="probootstrap-price-wrap">
               <span class="probootstrap-price" x-data x-text="formatCurrency($store.plans.getPlan('BRONZE').price, 'KES')"></span>
               <span class="probootstrap-price-per-month">ONETIME</span>
+              <hr>
+              or
+              <span style="font-size: 1rem; font-weight: 500;">KES 300 / 3$ per week</span>
             </div>
             <ul>
               <li>
@@ -218,6 +248,9 @@ $_SESSION['discounts'] = [
             <div class="probootstrap-price-wrap">
               <span class="probootstrap-price" x-data x-text="formatCurrency($store.plans.getPlan('SILVER').price, 'KES')"></span>
               <span class="probootstrap-price-per-month">ONETIME</span>
+              <hr>
+              or
+              <span style="font-size: 1rem; font-weight: 500;">KES 400 / 4$ per week</span>
             </div>
             <ul>
               <li>
@@ -263,7 +296,9 @@ $_SESSION['discounts'] = [
             <div class="probootstrap-price-wrap">
               <span class="probootstrap-price" x-data x-text="formatCurrency($store.plans.getPlan('GOLD').price, 'KES')"></span>
               <span class="probootstrap-price-per-month">ONETIME</span>
-
+              <hr>
+              or
+              <span style="font-size: 1rem; font-weight: 500;">KES 500 / 5$ per week</span>
             </div>
             <ul>
               <li>
@@ -465,7 +500,7 @@ $_SESSION['discounts'] = [
 
   <!-- Modal FREESECTION-->
   <div class="modal fade" id="free-trial-modal" tabindex="-1" role="dialog" aria-hidden="true" x-data="{...checkoutFormData(), loading: false, error: null, customer: null}">
-    <div class="modal-dialog" role="document">
+    <div class="modal-dialog modal-dialog-scrollable" role="document">
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title">Start Free Trial</h5>
@@ -530,15 +565,35 @@ $_SESSION['discounts'] = [
               <strong>required</strong></small>
           </form>
         </div>
-        <div class="modal-body" x-show="customer && !error">
+        <div class="modal-body" x-show="customer && !error" x-data="{downloadLoading: false}">
           <div class="row justify-content-center ">
             <div class="col-10">
               <dotlottie-player src="https://lottie.host/fad7868a-fe30-449e-a16e-5cae26c9eb4f/haWLqbDK3w.json" background="transparent" speed="1" style="width: 100%; height: 300px;" loop autoplay></dotlottie-player>
             </div>
+            <div class="col-10"><span class="loader" x-show="downloadLoading" x-cloak x-transition></span></div>
             <p class="w-75 text-center">Download managex trial version through the link below, the link has also been emailed to you</p>
-            <a class="btn btn-primary" :href="`controllers/download.php?download_id=${customer?.download_id}`">
-              Download Managex
+            <a class="btn btn-primary position-relative" x-data="{progress: null}" @download-progress.window="()=>{
+              progress = $event.detail
+            }" href="#" @click="()=>{
+              downloadLoading = true
+              downloadManagex(mgxDefaultVersion.link, megaUser).then(() => {
+                updateDownloadStatus(customer?.download_id).catch(e => console.error(e))
+              })
+            }" style="background-color: #C3EE95;" @download-started.window="downloadLoading = false">
+              <span style="position: relative; z-index: 1000;">
+                Download <span x-data x-text="mgxDefaultVersion.full_name"></span>
+                <span class="ml-2" x-show="progress" x-cloak x-text="`(${Math.round(progress?.percentComplete)}%)`"></span>
+              </span>
+              <div class="overlay position-absolute" style="top: 0; bottom: 0; left: 0; background-color: #7ed321; display: flex; justify-content: center; align-items: center;" :style="{width: `${progress?.percentComplete || 0}%`}"></div>
             </a>
+            
+            <a data-toggle="collapse" href="#changelog" role="button" aria-expanded="false" aria-controls="changelog" class="col-12 text-center mt-2">View Changelog</a>
+            <a href="#" data-toggle="modal" data-target="#tutorialModal" class="col-12 text-center mt-2">View Installation tutorial</a>
+            <div class="collapse m-3" id="changelog">
+              <div class="card card-body">
+                <p x-text="mgxDefaultVersion.upgrade_info"></p>
+              </div>
+            </div>
           </div>
         </div>
         <div class="modal-body" x-show="error" x-transition>
@@ -568,6 +623,7 @@ $_SESSION['discounts'] = [
     </div>
   </div>
 
+<?php require_once('views/tutorial_modal.php') ?>
   <!-- VIDEO ILLUSTRATIONS -->
   <section class="probootstrap-section position-relative" style="padding-bottom: 7em;" id="video-illustrations" >
     <div class="container">
@@ -648,6 +704,132 @@ $_SESSION['discounts'] = [
     </div>
   </section>
 
+  <!-- HOTELEX SECTION -->
+<section class="probootstrap-section probootstrap-bg-white  probootstrap-zindex-above-showcase">
+  <div class="container">
+      <div class="row justify-content-center" style="margin-bottom: 4rem;">
+        <div class="col-md-6 col-md-offset-3 text-center section-heading probootstrap-animate"
+          data-animate-effect="fadeIn">
+          <h6>Other Products</h6>
+          <h2>Hotele<span style="text-decoration: underline;">x</span></h2>
+          <p class="lead">
+            Hotelex is a point of sale software solution designed for restaurants/clubs/lounges to streamline operations and boost profitability. 
+            Whether you're looking to improve sales accuracy, track inventory more efficiently or gain better insight into your sales data, 
+            Hotelex has you covered.
+          </p>
+        </div>
+      </div>
+
+      <div class="row probootstrap-gutter60 features hotelex"
+        x-data="{scrollable: null, scrollItemSize: (380 + 60), atStart: true, atEnd: false}"
+        x-init="()=>{
+          if(!scrollable) {
+                $nextTick(()=>{
+                    scrollable = document.querySelector(`div.row.probootstrap-gutter60.hotelex.features`)
+                    $(scrollable).on('scroll', ()=> {
+                        if(scrollable.scrollLeft > 0 && atStart) {
+                            atStart = false
+                        }
+                        if(scrollable.scrollLeft == 0) {
+                            atStart = true
+                        }
+                        if(scrollable.scrollLeft + scrollable.clientWidth >= scrollable.scrollWidth) {
+                            atEnd = true
+                        } else {
+                            if(atEnd) {
+                                atEnd = false
+                            }
+                        }
+                    })
+                })
+            }
+        }">
+        <div class="col-md-4 col-sm-6 col-12 probootstrap-animate" data-animate-effect="fadeInLeft">
+          <div class="service text-center">
+            <div class="icon"><i class="icon-cart"></i></div>
+            <div class="text">
+              <h3>Point of sale</h3>
+              <p>Manage retail operations from orders to billing to payments and everything in between such as handling returns and shifts, get comprehensive reports on sales, returns and payments.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4 col-sm-6 col-12 probootstrap-animate" data-animate-effect="fadeIn">
+          <div class="service text-center">
+            <div class="icon"><i class="icon-clipboard"></i></div>
+            <div class="text">
+              <h3>Inventory Management</h3>
+              <p>
+                Keep track of stocks from delivery to issuing to sales via Hotelex' innovative store items integration and costing techniques. 
+                Get accurate reports on stock movement per item and stock balances. 
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4 col-sm-6 col-12 probootstrap-animate" data-animate-effect="fadeInRight">
+          <div class="service text-center">
+            <div class="icon"><i class="icon-credit-card"></i></div>
+            <div class="text">
+              <h3>Finance and Accounting</h3>
+              <p>
+                360 degree view of your business finances accross all other modules (such as P.O.S and stocks). 
+                The system jounals all transactions automatically to their respective accounts crediting and debiting them as should be.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4 col-sm-6 col-12 probootstrap-animate" data-animate-effect="fadeInLeft">
+          <div class="service text-center">
+            <div class="icon"><i class="icon-home"></i></div>
+            <div class="text">
+              <h3>Rooms and Accomodation</h3>
+              <p>
+                Hotelex provides features to facilitate the business of rooms and accomodation e.g rooms register and reservation, 
+                check-ins, invoicing, guest accounts management and payment processing.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4 col-sm-6 col-12 probootstrap-animate" data-animate-effect="fadeIn">
+          <div class="service text-center">
+            <div class="icon"><i class="icon-coin-dollar"></i></div>
+            <div class="text">
+              <h3>Payroll</h3>
+              <p>
+                Keep track of staff pay with hotelex payroll module which comes bundled with features that consider staff basic pay,
+                benefits and deductions. Generate printouts such as Nssf Returns, Nhif Returns, Paye Monthly Returns, 
+                Master Roll and Payslips.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <button type="button" class="btn-control prev" x-cloak x-data x-show="!atStart" x-transition @click="()=>{
+          console.log('left')
+            $(scrollable).css('scroll-snap-type', 'none')
+            $(scrollable).animate({scrollLeft: `-=${scrollItemSize}`}, 300, 'easeInCubic', ()=>{
+                $(scrollable).css('scroll-snap-type', 'x mandatory')
+            })
+        }">
+            <i class="fa-solid fa-chevron-left"></i>
+        </button>
+        <button type="button" class="btn-control next" x-cloak x-data x-show="!atEnd" x-transition @click="()=>{
+          console.log('right')
+
+            if(scrollable) {
+                $(scrollable).css('scroll-snap-type', 'none')
+                $(scrollable).animate({scrollLeft: `+=${scrollItemSize}`}, 300, 'easeInCubic', ()=>{
+                    $(scrollable).css('scroll-snap-type', 'x mandatory')
+                })
+            } else {
+              console.log('no scrollable')
+            }
+        }">
+            <i class="fa-solid fa-chevron-right"></i>
+        </button>
+      </div>
+  </div>
+</section>
   <!-- CONTACT BANNER -->
   <section class="probootstrap-hero probootstrap-xs-hero probootstrap-hero-colored" id="contact">
     <div class="container">
@@ -670,9 +852,9 @@ $_SESSION['discounts'] = [
   <!-- CONTACT SECTION -->
   <section class="probootstrap-section probootstrap-bg-white">
     <div class="container">
-      <div class="row">
-        <div class="col-md-5 probootstrap-animate" data-animate-effect="fadeIn" x-data="{formLoading: false}">
-          <h2>Drop us a line</h2>
+      <div class="row justify-content-center">
+        <div class="col-md-6 col-xl-4 probootstrap-animate" data-animate-effect="fadeIn" x-data="{formLoading: false, sent: false}" x-show="!sent" x-transition>
+          <h2>Send us a message</h2>
           <form action="#" method="post" class="probootstrap-form" x-data @submit.prevent="()=>{
             formLoading = true
             makeInquiry($event).then(inquiry => {
@@ -684,6 +866,7 @@ $_SESSION['discounts'] = [
                 </button>
               </div>
               `
+              sent = true
             }).catch(e=> {
               document.getElementById('inquiry-response').innerHTML = `
               <div class='alert alert-danger alert-dismissible fade show' role='alert'>
@@ -713,25 +896,59 @@ $_SESSION['discounts'] = [
               <label for="message">Message *</label>
               <textarea cols="30" rows="10" class="form-control" id="message" name="message" placeholder="Only the message is required but other details are appreciated."></textarea>
             </div>
+            
             <div class="form-group d-flex align-items-center" style="gap: 1rem;">
-              <input type="submit" class="btn btn-primary btn-lg" id="submit" name="submit" value="Submit Form">
+              <input type="submit" class="btn btn-primary btn-lg" id="submit" name="submit" value="Send Message">
               <span class="loader" x-show="formLoading" x-cloak x-transition></span>
             </div>
           </form>
+          <div id="inquiry-response">
+          </div>
         </div>
-        <div class="col-md-6 col-md-push-1 probootstrap-animate" data-animate-effect="fadeIn">
+        <div class="col-md-6 col-xl-4 col-md-push-1 probootstrap-animate" data-animate-effect="fadeIn" x-init="">
           <h2>Visit us in person</h2>
           <p>We are open for office visitation during business days from 9am to 6pm</p>
 
           <h4>Nairobi, Kenya</h4>
           <ul class="probootstrap-contact-info">
-            <li><i class="icon-pin"></i> <span>Ridgeways along Kiambu road, Ciata city mall 3rd floor</span></li>
+            <li><i class="icon-pin"></i> <span>Ciata city mall, Kiambu Road, Nairobi</span></li>
             <li><i class="icon-email"></i><span>info@kingsoft.biz</span></li>
             <li><i class="icon-phone"></i><span>0729 089 638</span></li>
           </ul>
           <div id="inquiry-response">
             
           </div>
+          <h4>Location</h4>
+          <div class="map mt-1" id="map" style="height: 280px;" x-data x-init="()=>{
+              const map = L.map('map').setView([-1.2258785, 36.8398238], 13);
+              L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                  maxZoom: 19,
+                  attribution: `&copy; <a href='http://www.openstreetmap.org/copyright'>OpenStreetMap</a>`
+              }).addTo(map);
+              L.marker([-1.2265015927026184, 36.83874248503855]).addTo(map);
+          }"></div>
+        </div>
+        <div class="col-12 col-xl-4 probootstrap-animate" >
+        <template x-data x-if="$store.clients.list.length" data-animate-effect="fadeIn">
+            <div class="clientelle position-relative" >
+              <h4 class="mb-3">Our Clients</h4>
+              
+              <div class="clients" x-data="{scrollable: null, scrollItemSize: null, atStart: true, atEnd: false}" >
+                <template x-data x-for="client in $store.clients.list" :key="client.id">
+                  <a 
+                    :href="client.social.link"target="_blank" class="client"
+                    x-id="['client']"
+                    :id="$id('client')" 
+                    x-data
+                  >
+                      <img src="img/client_image_placeholder.jpeg" :alt="`${client.name} logo`" x-init="()=>{
+                        $el.setAttribute('src', `./uploads/${client.name}/${client.logo}`)
+                      }">
+                  </a>
+                </template>
+              </div>
+            </div>
+          </template>
         </div>
       </div>
     </div>
@@ -745,12 +962,11 @@ $_SESSION['discounts'] = [
           <div class="probootstrap-footer-widget">
             <h3>Links</h3>
             <ul>
-              <li><a href="#hero">Start</a></li>
-              <li><a href="#features">Features</a></li>
-              <li><a href="#reviews">Reviews</a></li>
-              <li><a href="#pricing">Pricing</a></li>
-              <li><a href="#faq">FAQ</a></li>
-              <li><a href="#contact">Contact</a></li>
+            <li ><a href="#hero" >Plans</a></li>
+            <li ><a href="#features" >Features</a></li>
+            <li ><a href="#video-illustrations"> Video Illustrations</a></li>
+            <li ><a href="managex_training_docs"  target="_blank">User Manual</a></li>
+            <li ><a href="#contact" >Contact</a></li>
             </ul>
           </div>
         </div>

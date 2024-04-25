@@ -25,6 +25,7 @@ if(!isset($_SESSION['user_id'])) {
   <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/intersect@3.x.x/dist/cdn.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@caneara/iodine@8.5.0/dist/iodine.min.umd.js"></script>
+  <script src="https://kit.fontawesome.com/f95e1afe0c.js" crossorigin="anonymous"></script>
   <script src="assets/libs/moment.min.js"></script>
   <script src="assets/js/chart.js"></script>
   <script src="./assets/js/app.js"></script>
@@ -86,6 +87,14 @@ if(!isset($_SESSION['user_id'])) {
               </a>
             </li>
             <li class="sidebar-item mt-3">
+              <a class="sidebar-link" href="index.php?page=clients" aria-expanded="false" :class="(page == 'clients') && 'active'">
+                <span>
+                <i class="fa-solid fa-user"></i>
+                </span>
+                <span class="hide-menu">Clients</span>
+              </a>
+            </li>
+            <li class="sidebar-item mt-3">
               <a class="sidebar-link" href="login/logout.php" aria-expanded="false">
                 <span>
                 <i class="fa-solid fa-right-from-bracket"></i>
@@ -127,6 +136,10 @@ if(!isset($_SESSION['user_id'])) {
             require_once('pages/dashboard.php');
           } else {
             require_once('pages/analytics.php');
+          } else if(!isset($_GET['page']) || $_GET['page'] == 'analytics') {
+            require_once('pages/analytics.php');
+          } else if(!isset($_GET['page']) || $_GET['page'] == 'clients') {
+            require_once('pages/clients.php');
           }
         ?>
 

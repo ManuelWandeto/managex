@@ -22,6 +22,31 @@ try {
     if(!$inquiry) {
         throw new Exception("UNCAUGHT error making inquiry", 500);
     }
+    $notificationMail = file_get_contents(__DIR__ . '/../email_templates/inquiry_notification.html');
+    $parsedMail = str_replace([
+        "{name}",
+        "{email}",
+        "{country_name}",
+        "{phone}",
+        "{sent_at}",
+        "{message}"
+    ], [
+        !empty($_POST['name']) ? $_POST['name'] : "Blank",
+        !empty($_POST['email']) ? $_POST['email'] : "Blank",
+        !empty($_SESSION['localle']) ? $_SESSION['localle']['country']['name'] : "N/A",
+        !empty($_POST['phone']) ? $_POST['phone'] : "Blank",
+        date("Y-m-d \\a\\t g:ia", strtotime($inquiry['created_at'])),
+        $_POST['message']
+    ], $notificationMail);
+
+    foreach (["customercare@kingsoft.biz", "info@kingsoft.biz"] as $email) {
+        $sentmail = send_mail($email_conn, [
+            "to" => $email,
+            "about" => "New Inquiry Notification",
+            "message" => $parsedMail
+        ], $dbLogger);
+    }
+    
     echo json_encode($inquiry);
     exit;
 } catch (PDOException $e) {

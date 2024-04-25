@@ -100,15 +100,20 @@ div.clients div.client div.card div.card-body .drawable {
 div.clients div.client div.card a.edit-client {
     z-index: 99;
 }
+div#add-client div.form-group.socials > div {
+    gap: .4rem;
+}
+div#add-client div.form-group.socials select {
+    flex: 1;
+}
+div#add-client div.form-group.socials input {
+    flex: 2;
+}
 .drawable .more {
     opacity: 0;
     transition: all .3s ease-in;
 }
-div.clients div.client div.card:hover div.card-body .drawable {
-    height: 100%;
-    background: var(--bs-card-bg);
-    border-radius: var(--bs-card-border-radius);
-}
+
 div.clients div.client div.card:hover .drawable .more {
     opacity: 1;
 }

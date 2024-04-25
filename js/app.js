@@ -1,16 +1,20 @@
 const navLinks = document.querySelectorAll('nav ul.navbar-nav li a')
 
 navLinks.forEach(l => l.addEventListener('click', (e) => {
-    e.preventDefault();
-    const section = document.querySelector(l.getAttribute('href'));
-    section.scrollIntoView({behavior: 'smooth', block: 'start'})
+    if(l.getAttribute('href').includes('#')) {
+        e.preventDefault();
+        const section = document.querySelector(l.getAttribute('href'));
+        section.scrollIntoView({behavior: 'smooth', block: 'start'})
+    }
 }))
 
 const footerLinks = document.querySelectorAll('footer div.links ul li a')
 footerLinks.forEach(l => l.addEventListener('click', (e) => {
-    e.preventDefault();
-    const section = document.querySelector(l.getAttribute('href'));
-    section.scrollIntoView({behavior: 'smooth', block: 'start'})
+    if(l.getAttribute('href').includes('#')) {
+        e.preventDefault();
+        const section = document.querySelector(l.getAttribute('href'));
+        section.scrollIntoView({behavior: 'smooth', block: 'start'})
+    }
 }))
 
 $(function () {
@@ -30,6 +34,7 @@ async function retryPayment(trackingId, type = 'order') {
         if(type !== 'order') {
             url += "&type=custom"
         }
+
         const res = await axios.get(url)
         if(!res.data.tracking_id) {
             throw new Error('Uncaught error retrying order request')

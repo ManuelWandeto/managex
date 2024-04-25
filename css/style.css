@@ -355,6 +355,34 @@ div.ad-banner h5 {
     }
   }
 
+/* Our clients */
+
+div.clientelle div.clients {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    width: 100%;
+    justify-items: start;
+
+}
+
+div.clientelle div.clients a.client {
+    text-decoration: none;
+    background-color: transparent;
+    transition: all .3s ease-in;
+    display: inline-block;
+    position: relative;
+    color: rgb(39, 39, 39);
+}
+
+div.clientelle div.clients a.client img {
+    width: 100%;
+    display: inline-block;
+    /* margin-bottom: 3.6rem; */
+    /* height: 100% */
+}
+
+/* clients section */
+
 
 @media (min-width: 768px) {
     button.btn-control.prev {

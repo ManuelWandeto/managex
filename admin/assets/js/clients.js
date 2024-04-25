@@ -11,18 +11,13 @@ function clientFormData() {
       name: {value: null, error: null, rules: [
           'required', 'minLength:3'
       ]},
-      testimonial: {
-          value: null, error: null, rules: [
-          'required', 'minLength:10', 'maxLength:350'
-          ]
-      },
-      installationYear: {
-          value: null, error: null, rules: [
-          'optional', `beforeToday`
-          ]
-      },
       logo: null,
-      images: []
+      platform: {value: undefined, error: null, rules: [
+        'required'
+      ]},
+      platformLink: {value: null, error: null, rules: [
+        'required', 'url'
+      ]}
     },
     validateField(field) {
       let res = Iodine.assert(field.value, field.rules);
@@ -36,14 +31,13 @@ function clientFormData() {
       return ! this.isFormInvalid ;
     },
     isFormInvalid: true,
-    editClient({name, testimonial, logo, installation_year, images}) {
+    editClient({name, logo, social}) {
       clearFormErrors(this.fields)
       this.isFormValid()
       this.fields.name.value = name
-      this.fields.testimonial.value = testimonial
       this.fields.logo = logo
-      this.fields.installationYear.value = installation_year
-      this.fields.images = images
+      this.fields.platform.value = social['platform'] || undefined
+      this.fields.platformLink.value = social['link'] || null
     },
     async submit(e) {
       try {
